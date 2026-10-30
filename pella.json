@@ -1,0 +1,15 @@
+{
+  "name": "osint-hunter-hub-bot",
+  "runtime": "python3",
+  "buildCommand": "pip install -r requirements.txt",
+  "startCommand": "python bot.py",
+  "env": {
+    "BOT_TOKEN": {"required": true, "value": "PUT_YOUR_BOT_TOKEN_HERE"},
+    "ADMIN_ID": {"required": true, "value": "YOUR_NUMERIC_ADMIN_ID"},
+    "FORCE_CHANNEL": {"required": true, "value": "-1004393596502"},
+    "FORCE_CHANNEL_LINK": {"required": true, "value": "https://t.me/osint_xpert"},
+    "OWNER_USERNAME": {"required": false, "value": "@ANONYMOUS_XH"},
+    "MYNUM_API_URL": {"required": false, "value": "https://utility-api-v2.onrender.com/api"},
+    "MYNUM_API_KEY": {"required": true}
+  }
+}

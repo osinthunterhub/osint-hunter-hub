@@ -1,0 +1,13 @@
+# =====================================================================
+#  utility-api — KOI LIBRARY NAHI CHAHIYE.
+#
+#  Ye service jaan-boojh kar sirf Python ke built-in (stdlib) hisson se
+#  bani hai: http.server, urllib, json, socket, ipaddress, threading.
+#
+#  Fayda:
+#    • Render par pip install ka waqt ZERO
+#    • RAM ~30-40 MB (free plan 512 MB me bahut aaram)
+#    • koi supply-chain / version ka jhanjhat nahi
+#
+#  Isliye ye file jaan-boojh kar khaali hai. Kuch add MAT karna.
+# =====================================================================

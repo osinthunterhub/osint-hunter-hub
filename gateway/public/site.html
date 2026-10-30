@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSINT HUNTER HUB — Intelligence Terminal</title>
+<meta name="description" content="Fifteen intelligence tools in one hacker-grade terminal. Number intel, caller identity, vehicle lookup, IMEI forensics, board results. No login. Unlimited. Built by HIMANSHU from Sitamarhi, Bihar.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕵️%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Share+Tech+Mono&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════ OSINT HUNTER HUB — ULTRA PREMIUM HACKER TERMINAL ═══════════ */
+:root{
+  --bg:#010603; --bg2:#020a05; --panel:#03100a; --panel2:#05170e;
+  --line:#0c2f1b; --line2:#155c31;
+  --g:#00ff66; --g2:#00e05a; --gsoft:#7dffb8; --gdim:#0a5c2f;
+  --gold:#ffd166; --red:#ff3b5c; --cy:#39d5ff;
+  --txt:#d6ffe6; --txt2:#eafff2; --mut:#6aa583; --dim:#3f7254;
+  --mono:'Share Tech Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --disp:'Orbitron','Share Tech Mono',monospace;
+  --ui:'Rajdhani','Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);line-height:1.65;overflow-x:hidden;cursor:crosshair}
+a,button,input{cursor:pointer;font-family:var(--mono)}
+input{cursor:text}
+::selection{background:#00ff6633;color:#eafff2}
+::-webkit-scrollbar{width:10px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--gdim),var(--line2));border-radius:6px;border:2px solid var(--bg2)}
+a{color:var(--g);text-decoration:none}
+a:hover{text-shadow:0 0 14px #00ff6699}
+
+/* ---- layers ---- */
+#matrix{position:fixed;inset:0;z-index:-4;opacity:.42}
+.aurora{position:fixed;inset:0;z-index:-3;pointer-events:none;
+  background:radial-gradient(1100px 520px at 50% -12%,rgba(0,255,102,.10),transparent 62%),
+             radial-gradient(900px 500px at 90% 8%,rgba(0,180,255,.05),transparent 60%)}
+.scanlines{position:fixed;inset:0;z-index:70;pointer-events:none;opacity:.09;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.9) 2px 4px)}
+.vignette{position:fixed;inset:0;z-index:69;pointer-events:none;
+  background:radial-gradient(ellipse 108% 92% at 50% 38%,transparent 52%,rgba(0,0,0,.62) 100%)}
+#cursorGlow{position:fixed;width:420px;height:420px;border-radius:50%;pointer-events:none;z-index:-2;
+  background:radial-gradient(circle,rgba(0,255,102,.07),transparent 65%);transform:translate(-50%,-50%);transition:opacity .3s}
+
+/* ---- HUD top bar ---- */
+.hud{background:#000a04;border-bottom:1px solid var(--line);font-size:10px;letter-spacing:.14em;color:var(--dim)}
+.hud-in{max-width:1280px;margin:0 auto;padding:5px 20px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.hud b{color:var(--g);font-weight:400;text-shadow:0 0 8px #00ff6644}
+.hud .warn{color:var(--gold)}
+
+/* ---- nav ---- */
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(16px);background:rgba(1,6,3,.82);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:66px;padding:0 20px;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;white-space:nowrap}
+.brand .sq{width:40px;height:40px;border:1.5px solid var(--g);border-radius:10px;display:grid;place-items:center;font-size:18px;
+  box-shadow:0 0 18px #00ff6633,inset 0 0 16px #00ff6612;position:relative}
+.brand .sq::after{content:"";position:absolute;inset:-5px;border:1px solid #00ff6622;border-radius:13px;animation:pulse 2.4s infinite}
+@keyframes pulse{50%{opacity:.25;transform:scale(1.06)}}
+.brand .nm{font-family:var(--disp);font-weight:900;font-size:16px;letter-spacing:.09em;color:var(--txt2)}
+.brand .nm b{color:var(--g);text-shadow:0 0 16px #00ff6666}
+.brand .nm small{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.34em;color:var(--dim);font-weight:400}
+.nav-links{display:flex;gap:26px;font-size:12px;letter-spacing:.12em;color:var(--mut)}
+.nav-links a{color:var(--mut);position:relative;padding:4px 0}
+.nav-links a::after{content:"";position:absolute;left:0;bottom:0;width:0;height:1px;background:var(--g);transition:.25s;box-shadow:0 0 8px var(--g)}
+.nav-links a:hover{color:var(--txt2)}
+.nav-links a:hover::after{width:100%}
+.tg{font-family:var(--disp);font-size:11.5px;font-weight:800;letter-spacing:.1em;color:#02140a!important;
+  background:linear-gradient(90deg,var(--g),var(--gsoft));padding:10px 20px;border-radius:9px;
+  box-shadow:0 0 24px #00ff6644;white-space:nowrap;transition:.2s}
+.tg:hover{box-shadow:0 0 40px #00ff6688;transform:translateY(-1px)}
+.burger{display:none;background:none;border:1px solid var(--line2);color:var(--g);font-size:15px;border-radius:8px;padding:6px 12px}
+
+/* ---- boot ---- */
+#boot{position:fixed;inset:0;z-index:120;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .6s}
+#boot.off{opacity:0;pointer-events:none}
+#bootin{width:min(680px,92vw)}
+#bootin .ln{font-size:13px;color:var(--g);white-space:pre-wrap;text-shadow:0 0 8px #00ff6633;min-height:1.5em}
+#bootin .ln .dim{color:var(--dim)}
+#bbar{height:3px;background:#062812;border-radius:3px;margin-top:18px;overflow:hidden}
+#bbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gdim),var(--g));box-shadow:0 0 14px var(--g);transition:width .3s}
+.cursor{display:inline-block;width:8px;height:1.05em;background:var(--g);vertical-align:-3px;animation:blink .8s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ---- layout ---- */
+.wrap{max-width:1280px;margin:0 auto;padding:28px 20px 60px}
+.term{border:1px solid var(--line2);border-radius:16px;overflow:hidden;position:relative;
+  background:linear-gradient(180deg,#03120a,#020b06);
+  box-shadow:0 0 60px #00ff660a,0 30px 80px #000000cc, inset 0 1px 0 #00ff6612}
+.term::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:16px;
+  background:linear-gradient(135deg,#00ff660d,transparent 30%,transparent 70%,#00ff660d);
+  mix-blend-mode:screen}
+.tbar{display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--line);background:#020d07}
+.dot{width:11px;height:11px;border-radius:50%;box-shadow:0 0 6px #0006}
+.dot.r{background:#ff5f56}.dot.y{background:#ffbd2e}.dot.g{background:#27c93f}
+.tbar .ttl{margin-left:10px;color:var(--dim);font-size:11px;letter-spacing:.1em}
+.tbar .rt{margin-left:auto;display:flex;gap:16px;color:var(--dim);font-size:10px;letter-spacing:.1em;align-items:center}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--g);box-shadow:0 0 12px var(--g);display:inline-block;animation:pu 1.8s infinite}
+@keyframes pu{50%{opacity:.3}}
+
+/* ---- hero ---- */
+.hero{padding:52px 34px 40px;position:relative}
+.crumb{color:var(--dim);font-size:12px;margin-bottom:16px;letter-spacing:.05em}
+.crumb b{color:var(--g)}
+h1.glitch{font-family:var(--disp);font-weight:900;font-size:clamp(30px,5.4vw,58px);letter-spacing:.03em;line-height:1.1;color:#f2fff7;position:relative}
+h1.glitch .gg{color:var(--g);text-shadow:0 0 30px #00ff6644}
+h1.glitch::before,h1.glitch::after{content:attr(data-t);position:absolute;inset:0;overflow:hidden;letter-spacing:.03em}
+h1.glitch::before{color:var(--g);transform:translate(-2.5px,-1.5px);opacity:.5;clip-path:inset(0 0 58% 0);animation:gl 3s infinite steps(2)}
+h1.glitch::after{color:var(--cy);transform:translate(2.5px,1.5px);opacity:.35;clip-path:inset(56% 0 0 0);animation:gl 3.8s infinite reverse steps(2)}
+@keyframes gl{0%,91%{opacity:0}93%{opacity:.65}95%{opacity:.12}97%{opacity:.55}100%{opacity:0}}
+.typeline{margin-top:16px;font-size:13.5px;color:var(--mut);min-height:1.6em}
+.typeline b{color:var(--g);font-weight:400}
+.badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.badge{font-size:10.5px;font-weight:700;letter-spacing:.14em;padding:7px 14px;border-radius:7px;border:1px solid var(--line2);color:var(--mut);position:relative;overflow:hidden}
+.badge.hot{color:var(--g);border-color:var(--gdim);background:#00ff6608;text-shadow:0 0 10px #00ff6655}
+.badge.gold{color:var(--gold);border-color:#51430f;background:#ffd16608}
+.badge::before{content:"◆ ";color:var(--g);font-size:8px}
+.badge.gold::before{color:var(--gold)}
+.loc{margin-top:20px;font-size:10.5px;letter-spacing:.22em;color:var(--dim)}
+.loc b{color:var(--mut)}
+
+/* ---- app ---- */
+.app{display:grid;grid-template-columns:300px 1fr;border-top:1px solid var(--line)}
+.side{border-right:1px solid var(--line);padding:14px;background:#020d07}
+.side .cap{font-size:9.5px;font-weight:700;letter-spacing:.26em;color:var(--dim);padding:8px 10px 8px}
+.tb{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:1px solid transparent;
+  color:var(--mut);padding:11px 12px;border-radius:10px;font-size:13px;letter-spacing:.03em;transition:.14s;margin-bottom:3px;position:relative}
+.tb .pre{color:var(--dim);font-size:10px}
+.tb:hover{background:#00ff6608;color:var(--txt2)}
+.tb.on{background:linear-gradient(90deg,#00ff660f,#00ff6604);border-color:var(--gdim);color:#f2fff7;box-shadow:inset 0 0 24px #00ff6609}
+.tb.on::before{content:"";position:absolute;left:0;top:15%;bottom:15%;width:2px;background:var(--g);box-shadow:0 0 10px var(--g);border-radius:2px}
+.tb .em{font-size:21px;line-height:1}
+.tb small{display:block;font-size:9.5px;color:var(--dim);letter-spacing:.06em}
+.tb .cnt{margin-left:auto;font-weight:800}
+.tb.on small{color:var(--mut)}
+.main{padding:28px 30px 24px;min-width:0}
+.th{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.th h2{font-family:var(--disp);font-size:19px;letter-spacing:.06em;color:#f2fff7}
+.th .cmd{color:var(--g);font-size:11px;background:#00ff660d;border:1px solid var(--gdim);padding:4px 12px;border-radius:6px;letter-spacing:.08em}
+.td{color:var(--mut);font-size:12.5px;margin:8px 0 16px;letter-spacing:.02em}
+.bar{height:1px;background:linear-gradient(90deg,var(--line2),transparent);margin-bottom:20px}
+
+.runf{display:flex;gap:10px;flex-wrap:wrap}
+.inwrap{flex:1;min-width:240px;position:relative}
+.inwrap .pf{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--g);font-size:13px}
+.tin{width:100%;font-family:var(--mono);font-size:14.5px;letter-spacing:.04em;color:#f2fff7;background:#010a04;
+  border:1px solid var(--line2);border-radius:10px;padding:13px 14px 13px 36px;outline:none;transition:.18s}
+.tin:focus{border-color:var(--g);box-shadow:0 0 0 3px #00ff6612,0 0 26px #00ff6614}
+.tin::placeholder{color:#2e5c40}
+.go{font-family:var(--disp);font-weight:800;font-size:12.5px;letter-spacing:.12em;color:#02140a;border:none;border-radius:10px;
+  padding:13px 26px;background:linear-gradient(90deg,var(--g),var(--gsoft));box-shadow:0 0 26px #00ff6636;transition:.18s;white-space:nowrap}
+.go:hover{box-shadow:0 0 40px #00ff6677;transform:translateY(-1px)}
+.go:disabled{opacity:.5;cursor:wait;transform:none}
+.hint{color:var(--dim);font-size:11.5px;margin-top:10px;letter-spacing:.03em}
+.hint b{color:var(--mut)}
+
+.state{text-align:center;padding:48px 16px;color:var(--dim)}
+.state .big{font-size:52px;margin-bottom:14px;filter:drop-shadow(0 0 18px #00ff6644)}
+.state h3{font-family:var(--disp);color:var(--mut);font-size:13.5px;letter-spacing:.14em;margin-bottom:8px}
+.state p{font-size:12.5px;max-width:440px;margin:0 auto}
+.spin{width:32px;height:32px;border:3px solid #00ff6620;border-top-color:var(--g);border-radius:50%;margin:0 auto 14px;animation:sp .75s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.errbox{border:1px solid #5c1220;background:#ff3b5c09;border-radius:10px;padding:13px 16px;color:#ffb3c0;font-size:12.5px;margin-top:16px}
+.okline{border:1px solid var(--gdim);background:#00ff6605;border-radius:10px;padding:12px 16px;color:var(--txt);font-size:12px;margin-top:16px}
+
+/* ---- result ---- */
+.res{margin-top:22px;border:1px solid var(--line2);border-radius:13px;overflow:hidden;background:#010a04;animation:up .3s ease;position:relative}
+.res::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--g),transparent);opacity:.7}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.res-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);background:#03140a;flex-wrap:wrap}
+.res-h .t{font-family:var(--disp);font-size:11.5px;font-weight:800;letter-spacing:.16em;color:var(--g)}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{font-size:9px;font-weight:700;letter-spacing:.12em;padding:4px 9px;border-radius:5px;border:1px solid var(--line2);color:var(--dim)}
+.chip.g{color:var(--g);border-color:var(--gdim);text-shadow:0 0 8px #00ff6655}
+.chip.y{color:var(--gold);border-color:#51430f}
+.res-b{padding:14px 18px}
+.fline{display:grid;grid-template-columns:200px 1fr;gap:12px;padding:8px 4px;border-bottom:1px dashed #0a2414;font-size:12.5px;letter-spacing:.02em}
+.fline:last-child{border-bottom:none}
+.fline .k{color:var(--dim)}
+.fline .k::before{content:"▸ ";color:var(--g)}
+.fline .v{color:#f2fff7;word-break:break-word}
+.fline .v code{color:var(--g);text-shadow:0 0 10px #00ff6633}
+.pillrow{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0}
+.pill{font-size:11px;border:1px solid var(--line2);border-radius:999px;padding:5px 13px;color:var(--mut);transition:.15s}
+.pill:hover{color:var(--g);border-color:var(--gdim);text-shadow:0 0 8px #00ff6655}
+.sect{font-family:var(--disp);font-size:10px;font-weight:800;letter-spacing:.24em;color:var(--g);margin:18px 0 8px;display:flex;align-items:center;gap:12px}
+.sect::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--gdim),transparent)}
+.lg{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-left:2px solid var(--gdim);
+  border-radius:9px;margin:8px 0;background:#02120a;padding:10px 12px;transition:.15s}
+.lg:hover{border-color:var(--gdim);box-shadow:0 0 16px #00ff6612}
+.lg .em{font-size:18px}
+.lg .info{flex:1;min-width:0}
+.lg .info .a{font-size:12.5px;color:#f2fff7;letter-spacing:.03em}
+.lg .info .b{font-size:10.5px;color:var(--dim);letter-spacing:.04em}
+.lg .term{color:var(--g)}
+.lg .act{display:flex;gap:6px}
+.lgbtn{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--mut);background:#00ff660a;
+  border:1px solid var(--line2);border-radius:6px;padding:5px 10px;transition:.15s}
+.lgbtn:hover{color:var(--g);border-color:var(--gdim);text-shadow:0 0 8px #00ff6655}
+.lgbtn.del:hover{color:var(--red);border-color:#5c1220}
+.rec{border:1px solid var(--line);border-left:2px solid var(--gdim);border-radius:9px;margin:10px 0;background:#02120a;padding:4px 12px 8px}
+.rec-h{font-size:9.5px;letter-spacing:.2em;color:var(--g);padding:6px 0 2px;border-bottom:1px dashed #0a2414;margin-bottom:4px}
+.res-f{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
+.res-f .l{color:var(--dim);font-size:10.5px;letter-spacing:.04em}
+.copyb{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--g);background:#00ff660a;border:1px solid var(--gdim);border-radius:7px;padding:6px 14px;transition:.15s}
+.copyb:hover{box-shadow:0 0 16px #00ff6633}
+
+.strip{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:20px;color:var(--dim);font-size:10.5px;letter-spacing:.1em}
+.strip b{color:var(--g);font-weight:400}
+
+/* ---- ticker ---- */
+.ticker{border-top:1px solid var(--line);background:#020d07;padding:9px 16px;font-size:10.5px;letter-spacing:.08em;color:var(--dim);display:flex;gap:10px;align-items:center}
+.ticker .tag{color:var(--gold);border:1px solid #51430f;padding:2px 8px;border-radius:4px;font-size:9px;letter-spacing:.16em}
+#tick{color:var(--mut);white-space:nowrap;overflow:hidden}
+
+/* ---- sections ---- */
+section.s{max-width:1280px;margin:0 auto;padding:84px 20px 6px}
+.shead{text-align:center;margin-bottom:44px}
+.shead .tag{font-family:var(--disp);color:var(--g);font-size:10.5px;font-weight:800;letter-spacing:.34em}
+.shead h2{font-family:var(--disp);font-size:clamp(22px,3.6vw,34px);color:#f2fff7;margin-top:12px;letter-spacing:.05em}
+.shead p{color:var(--mut);font-size:13px;max-width:620px;margin:12px auto 0}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.gcard{--pad:24px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,#03110a,#020b06);
+  padding:var(--pad);transition:.22s;position:relative;overflow:hidden}
+.gcard::before,.gcard::after{content:"";position:absolute;width:16px;height:16px;border:1.5px solid var(--gdim);opacity:0;transition:.25s}
+.gcard::before{top:8px;left:8px;border-right:none;border-bottom:none}
+.gcard::after{bottom:8px;right:8px;border-left:none;border-top:none}
+.gcard:hover{border-color:var(--gdim);box-shadow:0 0 36px #00ff660e;transform:translateY(-4px)}
+.gcard:hover::before,.gcard:hover::after{opacity:1}
+.gcard .gh{color:var(--dim);font-size:9.5px;letter-spacing:.24em;margin-bottom:10px}
+.gcard .gh b{color:var(--g);font-weight:400}
+.gcard h3{font-family:var(--ui);font-weight:700;font-size:16px;color:#f2fff7;margin-bottom:8px;letter-spacing:.04em}
+.gcard p{color:var(--mut);font-size:12px;line-height:1.7}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:15px;overflow:hidden;background:#020d07}
+.st{padding:34px 14px;text-align:center;border-right:1px solid var(--line);position:relative}
+.st:last-child{border-right:none}
+.st .v{font-family:var(--disp);font-size:clamp(24px,3.6vw,38px);font-weight:900;color:var(--g);text-shadow:0 0 24px #00ff6644}
+.st .l{color:var(--dim);font-size:9.5px;letter-spacing:.24em;margin-top:7px;text-transform:uppercase}
+
+/* ---- dev credit ---- */
+.dev{display:grid;grid-template-columns:auto 1fr;gap:30px;align-items:center;border:1px solid var(--gdim);border-radius:18px;
+  padding:40px 36px;background:radial-gradient(600px 260px at 12% 0%,#00ff660f,transparent 65%),#020d07;position:relative;overflow:hidden}
+.dev::after{content:"MADE IN INDIA";position:absolute;right:-38px;top:26px;transform:rotate(38deg);
+  font-family:var(--disp);font-size:10px;letter-spacing:.3em;color:#00ff6614;padding:6px 46px;border:1px solid #00ff6610}
+.dev .av{width:104px;height:104px;border-radius:20px;overflow:hidden;border:1.5px solid var(--gdim);box-shadow:0 0 40px #00ff6622;flex-shrink:0}
+.dev .av img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.92) contrast(1.05)}
+.dev .who .r{color:var(--dim);font-size:10px;letter-spacing:.3em}
+.dev .who h3{font-family:var(--disp);font-size:clamp(20px,3vw,28px);color:#f2fff7;margin:6px 0 4px;letter-spacing:.06em}
+.dev .who .loc{margin:2px 0 12px}
+.dev .who p{color:var(--mut);font-size:12.5px;max-width:640px}
+.dev .lnks{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+.mini{font-size:10.5px;letter-spacing:.14em;border:1px solid var(--line2);color:var(--mut);border-radius:7px;padding:7px 14px;transition:.15s}
+.mini:hover{color:var(--g);border-color:var(--gdim);text-shadow:0 0 8px #00ff6655}
+
+/* ---- faq ---- */
+.faq{max-width:780px;margin:0 auto}
+.q{border:1px solid var(--line);border-radius:11px;margin-bottom:11px;background:#03110a;overflow:hidden}
+.q button{width:100%;display:flex;justify-content:space-between;gap:12px;background:none;border:none;color:var(--txt2);
+  font-size:13px;letter-spacing:.06em;padding:16px 20px;text-align:left}
+.q .pm{color:var(--g);font-size:16px}
+.q .a{max-height:0;overflow:hidden;transition:max-height .3s}
+.q .a p{padding:0 20px 16px;color:var(--mut);font-size:12.5px}
+
+/* ---- cta ---- */
+.ctabox{border:1px solid var(--gdim);border-radius:20px;padding:58px 28px;text-align:center;position:relative;overflow:hidden;
+  background:radial-gradient(760px 280px at 50% -60%,#00ff6614,transparent 70%),#020d07}
+.ctabox h2{font-family:var(--disp);font-size:clamp(21px,3.6vw,32px);color:#f2fff7;letter-spacing:.04em}
+.ctabox p{color:var(--mut);font-size:13px;margin:14px auto 26px;max-width:540px}
+
+footer{border-top:1px solid var(--line);margin-top:80px;background:#010603}
+.foot{max-width:1280px;margin:0 auto;padding:30px 20px 12px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:var(--dim);font-size:11.5px}
+.foot b{color:var(--g)}
+.made{max-width:1280px;margin:0 auto;padding:6px 20px 8px;color:var(--mut);font-size:11px;letter-spacing:.18em}
+.made b{color:var(--txt2)}
+.disc{max-width:1280px;margin:0 auto;padding:8px 20px 36px;color:#2e5c40;font-size:10.5px;line-height:1.75}
+
+@media(max-width:940px){
+  .app{grid-template-columns:1fr}
+  .side{border-right:none;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:2px}
+  .side .cap{grid-column:1/-1}
+  .grid3{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .st:nth-child(2){border-right:none}.st:nth-child(1),.st:nth-child(2){border-bottom:1px solid var(--line)}
+  .nav-links{display:none}
+  .burger{display:block}
+  .nav-links.open{display:flex;position:fixed;top:66px;left:0;right:0;background:#010603f5;border-bottom:1px solid var(--line);flex-direction:column;padding:22px;gap:18px;z-index:80}
+  .dev{grid-template-columns:1fr;text-align:center}
+  .dev .av{margin:0 auto}
+  .dev .lnks{justify-content:center}
+  .dev::after{display:none}
+  .fline{grid-template-columns:1fr;gap:2px}
+}
+@media(max-width:580px){.grid3{grid-template-columns:1fr}.side{grid-template-columns:1fr}.hero{padding:34px 18px}.main{padding:22px 18px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+<div class="aurora"></div>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+<div id="cursorGlow"></div>
+
+<!-- boot -->
+<div id="boot"><div id="bootin">
+  <div id="blines"></div>
+  <div id="bbar"><i></i></div>
+</div></div>
+
+<!-- HUD -->
+<div class="hud"><div class="hud-in">
+  <span>THREAT LEVEL: <b>LOW</b> · NODES: <b id="hudNodes">12/12</b> ONLINE · CORE: <b>STABLE</b></span>
+  <span>GRID: <b>SITAMARHI</b> · MODE: <b>STEALTH</b> · <span class="warn">UNLIMITED ACCESS ACTIVE</span></span>
+</div></div>
+
+<nav>
+  <div class="nav-in">
+    <a class="brand" href="#top">
+      <span class="sq">🕵️</span>
+      <span class="nm">OSINT <b>HUNTER HUB</b><small>INTELLIGENCE TERMINAL</small></span>
+    </a>
+    <div class="nav-links" id="nl">
+      <a href="#terminal">TERMINAL</a>
+      <a href="#protocol">PROTOCOL</a>
+      <a href="#arsenal">ARSENAL</a>
+      <a href="#dev">DEVELOPER</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a class="tg" href="https://t.me/osint_hunter_hub_bot" target="_blank" rel="noopener">TG BOT ↗</a>
+      <button class="burger" id="bg">▮▮▮</button>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap" id="top">
+  <div class="term">
+    <div class="tbar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="ttl">operator@osint-hunter-hub: ~/terminal</span>
+      <div class="rt"><span><span class="ldot"></span> SYSTEM ONLINE</span><span id="clock">--:--:--</span></div>
+    </div>
+
+    <div class="hero">
+      <div class="crumb"><b>operator@hub</b>:~$ ./init --all-modules --mode=unlimited<span class="cursor"></span></div>
+      <h1 class="glitch" data-t="OSINT HUNTER HUB">OSINT <span class="gg">HUNTER</span> HUB</h1>
+      <div class="typeline" id="typeline">&gt;</div>
+      <div class="badges">
+        <span class="badge hot">∞ UNLIMITED LOOKUPS</span>
+        <span class="badge hot">NO LOGIN · NO CREDITS</span>
+        <span class="badge">AUTO-FAILOVER CORE</span>
+        <span class="badge">SERVER-LOCKED API</span>
+        <span class="badge gold">BUILT IN BIHAR, INDIA</span>
+      </div>
+      <div class="loc">26.5937° N · 85.5900° E — <b>SITAMARHI GRID</b> — SIGNAL SECURE</div>
+    </div>
+
+    <!-- ============ TERMINAL ============ -->
+    <div class="app" id="terminal">
+      <aside class="side" id="side"><div class="cap">// MODULES — 18 ARMED</div>
+        <div class="cap" style="margin-top:6px">// OPERATOR</div>
+        <button class="tb" id="tb_log"><span class="pre">▸</span><span class="em">📜</span><span>OPERATOR LOG <span class="cnt" style="color:var(--g);font-size:10px;margin-left:4px"></span><small>saved on this device</small></span></button>
+        <a class="tb" href="https://t.me/ANONYMOUS_XH" target="_blank" rel="noopener"><span class="pre">▸</span><span class="em">✉</span><span>REQUEST MODULE<small>feedback → owner direct</small></span></a>
+      </aside>
+      <div class="main">
+        <div class="th"><h2 id="tName">—</h2><span class="cmd" id="tCmd"></span></div>
+        <div class="td" id="tDesc">—</div>
+        <div class="bar"></div>
+        <form class="runf" id="rf" autocomplete="off">
+          <div class="inwrap"><span class="pf">❯</span><input class="tin" id="q" type="text" spellcheck="false" placeholder=""></div>
+          <button class="go" id="go" type="submit">▶ EXECUTE</button>
+        </form>
+        <div class="hint" id="hint"></div>
+        <div id="err"></div>
+        <div id="out"></div>
+        <div class="strip">
+          <span>KEYS: <b>SERVER-SIDE LOCKED</b> · CREDITS: <b>UNLIMITED</b> · FAILover: <b>AUTO</b></span>
+          <span id="sess">SESSION QUERIES: 0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticker"><span class="tag">LIVE</span><span id="tick">booting telemetry…</span></div>
+  </div>
+</div>
+
+<!-- ============ PROTOCOL ============ -->
+<section class="s" id="protocol">
+  <div class="shead">
+    <div class="tag">// PROTOCOL</div>
+    <h2>HOW THE TERMINAL OPERATES</h2>
+    <p>Three moves. Nothing to install, nothing to sign, nothing to pay.</p>
+  </div>
+  <div class="grid3">
+    <div class="gcard"><div class="gh">STEP <b>01</b></div><h3>Select a module</h3><p>Fifteen intelligence modules are armed in the terminal panel. Pick your target type — number, plate, username, URL, IMEI or roll code.</p></div>
+    <div class="gcard"><div class="gh">STEP <b>02</b></div><h3>Feed the input</h3><p>Client-side validation fires before a single packet leaves your browser. Bad formats are rejected locally — zero footprint.</p></div>
+    <div class="gcard"><div class="gh">STEP <b>03</b></div><h3>Read the output</h3><p>Results render in a secure card with source chain, response time and one-click copy. Dead sources are skipped automatically by the failover core.</p></div>
+  </div>
+</section>
+
+<!-- ============ STATS ============ -->
+<section class="s">
+  <div class="stats">
+    <div class="st"><div class="v">15</div><div class="l">Modules Armed</div></div>
+    <div class="st"><div class="v">∞</div><div class="l">Unlimited Access</div></div>
+    <div class="st"><div class="v">&lt;2s</div><div class="l">Cached Reply</div></div>
+    <div class="st"><div class="v">24/7</div><div class="l">Terminal Uptime</div></div>
+  </div>
+</section>
+
+<!-- ============ ARSENAL ============ -->
+<section class="s" id="arsenal">
+  <div class="shead">
+    <div class="tag">// ARSENAL</div>
+    <h2>WHY THIS TERMINAL IS DIFFERENT</h2>
+  </div>
+  <div class="grid3">
+    <div class="gcard"><div class="gh">[<b>SEC</b>] KEY ISOLATION</div><h3>Unstealable API architecture</h3><p>The real API key never reaches your browser. Every request passes through a locked server-side proxy — dev-tools reveal a door with no keyhole.</p></div>
+    <div class="gcard"><div class="gh">[<b>NET</b>] DUAL-LINK</div><h3>Auto-failover per module</h3><p>Modules with multiple data sources run on fallback chains. If an upstream dies mid-request, the backup answers — you never see the failure.</p></div>
+    <div class="gcard"><div class="gh">[<b>SPD</b>] HOT CACHE</div><h3>Instant repeat hits</h3><p>Repeated targets resolve from cache at 0 ms. Frequently-hunted data stays hot and ready.</p></div>
+    <div class="gcard"><div class="gh">[<b>THR</b>] THROTTLE SHIELD</div><h3>Abuse suppression</h3><p>Per-network throttling neutralizes scraper abuse so genuine operators keep full speed.</p></div>
+    <div class="gcard"><div class="gh">[<b>OPS</b>] ZERO-TRACE</div><h3>No accounts · no tracking</h3><p>No signup, no email, no ad cookies. Session counters live only inside your browser and die with it.</p></div>
+    <div class="gcard"><div class="gh">[<b>INF</b>] OWN GRID</div><h3>Self-hosted infrastructure</h3><p>Own gateway, own datasets, own index — engineered end-to-end by one developer. No resellers in the middle.</p></div>
+  </div>
+</section>
+
+<!-- ============ DEVELOPER ============ -->
+<section class="s" id="dev">
+  <div class="shead">
+    <div class="tag">// DEVELOPER</div>
+    <h2>THE MIND BEHIND THE HUB</h2>
+  </div>
+  <div class="dev">
+    <div class="av"><img src="data:image/jpeg;base64,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" alt="HIMANSHU"></div>
+    <div class="who">
+      <div class="r">FOUNDER · DEVELOPER · ARCHITECT</div>
+      <h3>HIMANSHU</h3>
+      <div class="loc">FROM <b>SITAMARHI, BIHAR, INDIA</b> — 26.59°N 85.59°E</div>
+      <p>OSINT Hunter Hub is designed, engineered and operated end-to-end by a single independent developer.
+         Every module, the failover core, the private gateway and this terminal — all built from scratch,
+         shipped from a small town with a big grid.</p>
+      <div class="lnks">
+        <a class="mini" href="https://t.me/ANONYMOUS_XH" target="_blank" rel="noopener">✉ @ANONYMOUS_XH</a>
+        <a class="mini" href="https://t.me/osint_hunter_hub_bot" target="_blank" rel="noopener">▶ TELEGRAM BOT</a>
+        <a class="mini" href="https://t.me/osint_xpert" target="_blank" rel="noopener">📢 OFFICIAL CHANNEL</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="s" id="faq">
+  <div class="shead"><div class="tag">// FAQ</div><h2>STRAIGHT ANSWERS</h2></div>
+  <div class="faq">
+    <div class="q"><button>Is it really unlimited?<span class="pm">+</span></button><div class="a"><p>Yes — no accounts, no credits, no paywall on this terminal. Fair-use throttling exists only to stop automated abuse, never real operators.</p></div></div>
+    <div class="q"><button>Where does the data come from?<span class="pm">+</span></button><div class="a"><p>Results combine publicly available lookup sources, our own indexed datasets and self-hosted extractors through a private gateway. We do not host, sell or distribute leaked databases.</p></div></div>
+    <div class="q"><button>Can someone steal the API behind this site?<span class="pm">+</span></button><div class="a"><p>No. Browser requests hit a server-side proxy that holds the real key in locked environment variables. Dev-tools only ever see a keyless endpoint.</p></div></div>
+    <div class="q"><button>How fast are results?<span class="pm">+</span></button><div class="a"><p>Cached results are instant. Fresh lookups usually land in 0.5–4s. If a source is down, the failover chain answers automatically.</p></div></div>
+    <div class="q"><button>What does the IMEI module do?<span class="pm">+</span></button><div class="a"><p>Full IMEI forensics: genuine check-digit (Luhn) verification, reporting-body identification and TAC / serial / check-digit breakdown. Structure analysis runs 100% offline — always available.</p></div></div>
+    <div class="q"><button>What are the rules?<span class="pm">+</span></button><div class="a"><p>Lawful use only — verify your own records or contacts you interact with. Harassment, stalking or fraud gets blocked permanently.</p></div></div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="s">
+  <div class="ctabox">
+    <div class="crumb" style="justify-content:center;display:flex"><b>operator@hub</b>:~$ connect --telegram<span class="cursor"></span></div>
+    <h2>WANT THE FULL MOBILE ARSENAL?</h2>
+    <p>The Telegram bot carries the same fifteen modules with saved history, shareable cards and live channel updates.</p>
+    <a class="tg" style="font-size:13px;padding:14px 30px" href="https://t.me/osint_hunter_hub_bot" target="_blank" rel="noopener">▶ LAUNCH TELEGRAM BOT</a>
+  </div>
+</section>
+
+<footer>
+  <div class="foot">
+    <div>© 2026 <b>OSINT HUNTER HUB</b> · ALL SYSTEMS ENGINEERED IN-HOUSE</div>
+    <div style="display:flex;gap:18px"><a href="https://t.me/osint_hunter_hub_bot">BOT</a><a href="https://t.me/osint_xpert">CHANNEL</a><a href="#terminal">TERMINAL</a></div>
+  </div>
+  <div class="made">MADE &amp; DEVELOPED BY <b>HIMANSHU</b> — FROM <b>SITAMARHI, BIHAR</b> 🇮🇳</div>
+  <p class="disc">DISCLAIMER: OSINT Hunter Hub combines publicly available lookup sources with its own indexed datasets, served through its own private gateway.
+  We do not host, sell or distribute leaked or stolen databases. Use every module only where you have a lawful basis. Availability and accuracy are not guaranteed.
+  Abuse is throttled and logged. © HIMANSHU · @ANONYMOUS_XH</p>
+</footer>
+
+<script>
+/* ═══════════ MATRIX RAIN ═══════════ */
+(function(){
+  const c=document.getElementById('matrix');if(!c)return;
+  const x=c.getContext('2d');let cols,drops;const fs=15;
+  const chars='アイウエオカキクケコサシスセソ0123456789ABCDEFXZ<>/\\{}[]$#@%&*+=';
+  function rs(){c.width=innerWidth;c.height=innerHeight;cols=Math.ceil(c.width/fs);drops=Array(cols).fill(0).map(()=>Math.random()*-120)}
+  rs();addEventListener('resize',rs);
+  let last=0;
+  function draw(t){
+    if(t-last>55){last=t;
+      x.fillStyle='rgba(1,6,3,0.09)';x.fillRect(0,0,c.width,c.height);
+      x.font=fs+'px monospace';
+      for(let i=0;i<cols;i++){
+        x.fillStyle=Math.random()>.985?'#c9ffdf':'#00ff66';
+        x.fillText(chars[Math.floor(Math.random()*chars.length)],i*fs,drops[i]*fs);
+        if(drops[i]*fs>c.height&&Math.random()>.975)drops[i]=0;
+        drops[i]++;
+      }}
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+/* ═══════════ CURSOR GLOW ═══════════ */
+(function(){
+  const g=document.getElementById('cursorGlow');
+  addEventListener('pointermove',e=>{g.style.left=e.clientX+'px';g.style.top=e.clientY+'px'});
+})();
+
+/* ═══════════ BOOT ═══════════ */
+(function(){
+  const lines=[
+    '[ BOOT ] OSINT HUNTER HUB — TERMINAL v4.0',
+    '[ LINK ] secure channel ................ <span class="dim">ESTABLISHED</span>',
+    '[ CORE ] loading 15 modules ............ <span class="dim">ARMED</span>',
+    '[ NET  ] failover chains ............... <span class="dim">ACTIVE</span>',
+    '[ SEC  ] api keys ...................... <span class="dim">SERVER-LOCKED</span>',
+    '[ ACC  ] credits ....................... <span class="dim">UNLIMITED</span>',
+    '[ GRID ] sitamarhi node ................ <span class="dim">CONNECTED</span>',
+    '[ OK   ] WELCOME, OPERATOR.'
+  ];
+  const el=document.getElementById('blines'),bar=document.querySelector('#bbar i');
+  let i=0;
+  function nx(){
+    if(i<lines.length){
+      const d=document.createElement('div');d.className='ln';d.innerHTML=lines[i];
+      el.appendChild(d);bar.style.width=Math.round(((i+1)/lines.length)*100)+'%';
+      i++;setTimeout(nx,170);
+    }else setTimeout(off,450);
+  }
+  function off(){document.getElementById('boot').classList.add('off')}
+  document.getElementById('boot').onclick=off;
+  setTimeout(nx,260);setTimeout(off,4200);
+})();
+
+/* ═══════════ CLOCK + HUD ═══════════ */
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB')},1000);
+setInterval(()=>{
+  document.getElementById('hudNodes').textContent=(11+Math.floor(Math.random()*2))+'/12';
+},2600);
+
+/* ═══════════ HERO TYPEWRITER ═══════════ */
+(function(){
+  const el=document.getElementById('typeline');
+  const lines=[
+    '&gt; loading intelligence overlay… <b>done</b>',
+    '&gt; 15 modules armed · failover core online · <b>unlimited mode</b>',
+    '&gt; pick a module. feed the input. <b>read the output.</b>'
+  ];
+  let li=0,ci=0;
+  function type(){
+    const raw=lines[li];
+    el.innerHTML=raw.slice(0,ci)+'<span class="cursor"></span>';
+    ci+=3;
+    if(ci>raw.length+6){li=(li+1)%lines.length;ci=0;setTimeout(type,1400)}
+    else setTimeout(type,26);
+  }
+  type();
+})();
+
+/* ═══════════ LIVE TICKER (honest telemetry) ═══════════ */
+(function(){
+  const msgs=[
+    'MODULE tc: ready · deep-scan chain armed',
+    'MODULE challan: live portal link · 10-45s scrape',
+    'MODULE dl: sarathi records · photo + sign attached',
+    'MODULE fastag: netc tags · bank + status feed',
+    'MODULE ip: geo + isp + vpn flags · type ME for self-trace',
+    'MODULE numpro: gateway + aadhaar chain · DEEP merge',
+    'MODULE aadhaarpro: multi-record rich intel · owner-grade',
+    'MODULE imei: offline forensics active · 0 ms',
+    'FAILOVER: dual-link verified on num / webextract',
+    'CACHE CORE: hot targets resolve at 0 ms',
+    'GRID: sitamarhi node latency nominal',
+    'SECURITY: keys server-locked · zero browser exposure',
+    'PROTOCOL: no login required · unlimited access active'
+  ];
+  let i=0;const el=document.getElementById('tick');
+  function nx(){el.textContent='› '+msgs[i];i=(i+1)%msgs.length}
+  nx();setInterval(nx,3400);
+})();
+
+/* ═══════════ CONFIG ═══════════ */
+const PROXY='/siteapi';
+const DIRECT_BASE='https://utility-api-vu83.onrender.com/api';
+const DIRECT_KEY='';   /* fallback only — see deploy guide */
+
+/* ═══════════ TOOL REGISTRY ═══════════ */
+const ICON={num:'📱',tc:'📇',tg:'🆔',family:'👪',v2m:'📲',a2n:'🪪',biz:'📞',web:'🌐',result:'📋',imei:'📟',challan2:'🧾',dl:'🚘',fastag:'💳',ip:'📡'};
+const TOOLS=[
+ {id:'num',name:'NUMBER INFO PRO',cmd:'num --deep',tool:'numpro',ph:'10-digit mobile number',ex:'9876543210',
+  desc:'DEEP mode — gateway number record + Aadhaar-linked records merged in one card: names, father, circle, alt numbers, masked ID refs.',
+  hint:'FORMAT: 10-digit Indian mobile (starts 6-9) · hits every connected source · cached repeats = instant',
+  val:v=>/^[6-9]\d{9}$/.test(v)||'REJECTED: need a 10-digit Indian mobile number (starts 6-9).'},
+ {id:'tc',name:'TRUE CALLER',cmd:'caller --deep',tool:'tc',ph:'10-digit mobile number',ex:'8448140878',
+  desc:'Deep caller identity: name, SIM & network, region, locations, device references and a risk badge.',
+  hint:'FORMAT: 10-digit mobile · deep scan may take up to 20s · cached 12h',
+  val:v=>/^[6-9]\d{9}$/.test(v)||'REJECTED: need a 10-digit mobile number.'},
+ {id:'tg',name:'TELEGRAM NUMBER',cmd:'tg --resolve',tool:'tgnum',ph:'@username or 10-digit number',ex:'@Perfectamit65',
+  desc:'Resolve a Telegram username / ID into linked phone data from our own indexed dataset.',
+  hint:'FORMAT: @username or a 10-digit number linked to Telegram',
+  val:v=>/^@?\w{4,32}$/.test(v)||/^[6-9]\d{9}$/.test(v)||'REJECTED: need a @username or 10-digit number.'},
+ {id:'family',name:'FAMILY INFO',cmd:'family --members',tool:'familyinfo',ph:'12-digit reference number',ex:'401635555849',
+  desc:'Family / ration-card style lookup: member names and relations as a structured list.',
+  hint:'FORMAT: exactly 12 digits, no spaces',
+  val:v=>/^\d{12}$/.test(v)||'REJECTED: need exactly 12 digits.'},
+ {id:'v2m',name:'VEHICLE TO NUMBER',cmd:'rc --tomobile',tool:'vehicletomobile',ph:'Registration number',ex:'DL8CAF5030',
+  desc:'Registration plate in — linked mobile references out, through a hedged dual-provider chain.',
+  hint:'FORMAT: Indian RC like DL8CAB1234 · spaces removed automatically',
+  val:v=>/^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$/.test(v)||'REJECTED: need RC format like DL8CAB1234.'},
+ {id:'a2n',name:'AADHAAR TO NUMBER',cmd:'aadhaar --tomobile',tool:'aadhaar2num',ph:'12-digit reference number',ex:'401635555849',
+  desc:'Reverse lookup from an ID reference toward linked contact records. Cached 30 days.',
+  hint:'FORMAT: exactly 12 digits',
+  val:v=>/^\d{12}$/.test(v)||'REJECTED: need exactly 12 digits.'},
+ {id:'a2pan',name:'AADHAAR TO PAN',cmd:'aadhaar --pan',tool:'aadhaar2pan',ph:'12-digit Aadhaar reference',ex:'293649586679',
+  desc:'Aadhaar reference se linked PAN (masked) — source-verified lookup.',
+  hint:'FORMAT: 12-digit Aadhaar reference',
+  val:function(v){return /^[0-9]{12}$/.test(v.trim())?true:'12-digit Aadhaar reference bhejo (digits only).'},
+  icon:'🪪'},
+ {id:'ptg',name:'PAN TO GST',cmd:'pan --gst',tool:'pantogst',ph:'PAN (10 char)',ex:'AAAPL1234C',
+  desc:'PAN se saare registered GSTIN numbers — multi-source with sarkari fallback.',
+  hint:'FORMAT: 10-character PAN e.g. AAAPL1234C',
+  val:function(v){return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.trim().toUpperCase())?true:'10-character PAN bhejo (e.g. AAAPL1234C).'},
+  icon:'🏢'},
+ {id:'gst',name:'GST INFO',cmd:'gst --info',tool:'gst',ph:'GSTIN (15 char)',ex:'27AAPFU0939F1ZV',
+  desc:'GSTIN lookup — PAN embedded, category, return-sync status.',
+  hint:'FORMAT: 15-character GSTIN e.g. 27AAPFU0939F1ZV',
+  val:function(v){return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/.test(v.trim().toUpperCase())?true:'15-character GSTIN bhejo (e.g. 27AAPFU0939F1ZV).'},
+  icon:'🧾'},
+ {id:'biz',name:'BUSINESS INFO',cmd:'biz --find',tool:'phonebiz',ph:'Landline or mobile number',ex:'01129523401',
+  desc:'Registered business name, address, city and contacts — from our own 1.7M-record index.',
+  hint:'FORMAT: landline with STD code (011…) or mobile',
+  val:v=>v.replace(/\D/g,'').length>=8||'REJECTED: need at least 8 digits.'},
+ {id:'web',name:'WEBSITE EXTRACTOR',cmd:'web --recon',tool:'webextract',ph:'https://example.com',ex:'https://example.com',
+  desc:'Emails, phone numbers, links, meta tags and headings — extracted into one recon report. SSRF-hardened.',
+  hint:'FORMAT: any public website URL',
+  val:v=>/^(https?:\/\/)?[\w.-]+\.[a-z]{2,}/i.test(v)||'REJECTED: need a URL like https://example.com.'},
+ {id:'imei',name:'IMEI FORENSICS',cmd:'imei --analyze',tool:'imei',ph:'15-digit IMEI',ex:'356938035643809',
+  desc:'Genuine check-digit (Luhn) verification, reporting-body ID, TAC / serial / check-digit breakdown.',
+  hint:'FORMAT: 15 digits · analysis runs 100% offline — never down',
+  val:v=>/^\d{15}$/.test(v)||'REJECTED: need exactly 15 digits.'},
+ {id:'challan2',name:'CHALLAN CHECK',cmd:'challan --fetch',tool:'challan2',ph:'Registration number',ex:'UP16FB2070',
+  desc:'Live e-challan pull from the traffic portal — challan numbers, accused details and status for any RC.',
+  hint:'FORMAT: RC like UP16FB2070 · live portal scrape — can take 10-45s, worth the wait',
+  val:v=>/^[A-Za-z]{2}\d{1,2}[A-Za-z]{1,3}\d{4}$/.test(v.toUpperCase().replace(/\s+/g,''))||'REJECTED: need RC format like UP16FB2070.'},
+ {id:'dl',name:'DRIVING LICENCE',cmd:'dl --info',tool:'dl',ph:'DLNUMBER DD-MM-YYYY',ex:'UP25 20210027727 01-01-2001',
+  desc:'Full Sarathi DL record — holder name, father name, address, RTO, state, category, photo and signature links.',
+  hint:'FORMAT: <DL NUMBER> <DD-MM-YYYY> with a space — e.g. UP25 20210027727 01-01-2001',
+  val:v=>/^(.+)[\s\/, -]+\d{2}-\d{2}-\d{4}$/.test(v.trim())||'REJECTED: format is DLNUMBER DD-MM-YYYY (e.g. UP25 20210027727 01-01-2001).'},
+ {id:'fastag',name:'FASTAG INFO',cmd:'fastag --lookup',tool:'fastag',ph:'Registration number',ex:'RJ14CV0002',
+  desc:'All FASTag tags on a vehicle — banks, active/inactive status, issue dates, tag IDs and vehicle class.',
+  hint:'FORMAT: RC like RJ14CV0002 · shows every tag ever issued on the vehicle',
+  val:v=>/^[A-Za-z]{2}\d{1,2}[A-Za-z]{1,3}\d{4}$/.test(v.toUpperCase().replace(/\s+/g,''))||'REJECTED: need RC format like RJ14CV0002.'},
+ {id:'ip',name:'IP INTEL',cmd:'ip --trace',tool:'ipinfo',ph:'IP address (or type: me)',ex:'8.8.8.8',
+  desc:'Full IP breakdown — country, region, city, coordinates, timezone, ISP, ASN + VPN/proxy/hosting flags.',
+  hint:'FORMAT: IPv4 like 8.8.8.8 · type ME to trace your own connection',
+  val:v=>v.toLowerCase()==='me'||/^(\d{1,3}\.){3}\d{1,3}$/.test(v)||'REJECTED: need a valid IPv4 like 8.8.8.8 — or type me.'},
+ {id:'a2p',name:'AADHAAR INFO PRO',cmd:'aadhaar --deep',tool:'aadhaarpro',ph:'12-digit Aadhaar reference',ex:'401635555849',
+  desc:'DEEP mode — multi-record Aadhaar intel: names, father names, phones, alt numbers, addresses. Owner + X-TRACE grade sources.',
+  hint:'FORMAT: exactly 12 digits · returns every linked record in one card',
+  val:v=>/^\d{12}$/.test(v)||'REJECTED: need exactly 12 digits.'},
+ {id:'result',name:'RESULT CHECK',cmd:'result --bseb',tool:'result',ph:'ROLL/ROLLCODE',ex:'21010145/0307',
+  desc:'BSEB board result verification — live from board portals. SEASONAL: result servers open Feb–Apr only (notice, not an error).',
+  hint:'FORMAT: ROLL/ROLLCODE e.g. 21010145/0307 · honest seasonal message if portals closed',
+  val:v=>/^[A-Za-z]*\d{1,10}[\/,.\s-]+\d{1,5}$/.test(v)||'REJECTED: use ROLL/ROLLCODE like 21010145/0307.'},
+];
+
+/* ═══════════ UI ═══════════ */
+const $=i=>document.getElementById(i);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let CUR=TOOLS[0],SESS=0;
+
+TOOLS.forEach(t=>{
+  const b=document.createElement('button');b.className='tb';b.id='tb_'+t.id;
+  b.innerHTML=`<span class="pre">▸</span><span class="em">${ICON[t.id]}</span><span>${t.name}<small>${t.cmd}</small></span>`;
+  b.onclick=()=>select(t);$('side').appendChild(b);
+});
+function select(t){
+  CUR=t;
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  $('tb_'+t.id).classList.add('on');
+  $('tName').textContent=t.name;$('tCmd').textContent='$ '+t.cmd;$('tDesc').textContent=t.desc;
+  $('q').value='';$('err').innerHTML='';
+  if(t.id==='log'){$('runForm0');$('rf').style.display='none';$('hint').innerHTML='';renderLog();return}
+  $('rf').style.display='flex';
+  $('q').placeholder=t.ph;$('hint').innerHTML='<b>▸ '+t.hint+'</b>';
+  $('out').innerHTML=`<div class="state"><div class="big">${ICON[t.id]}</div><h3>${esc(t.name)} — MODULE ARMED</h3><p>Feed the input and hit EXECUTE. Output renders below with source chain and timing.</p></div>`;
+  try{$('q').focus()}catch(_){}
+}
+
+/* ═══ OPERATOR LOG — history 100% user ke apne phone/browser me ═══ */
+const LOG_KEY='ohh_log_v1', LOGTOOL={id:'log',name:'OPERATOR LOG',cmd:'log --view',em:'📜'};
+function loadLog(){try{return JSON.parse(localStorage.getItem(LOG_KEY)||'[]')}catch(_){return[]}}
+function saveLog(l){try{localStorage.setItem(LOG_KEY,JSON.stringify(l.slice(0,300)))}catch(_){}}
+function logBadge(){const n=loadLog().length;const c=document.querySelector('#tb_log .cnt');if(c)c.textContent=n?('['+n+']'):''}
+function addHistory(toolId,name,term,ms,src){
+  let l=loadLog();const now=Date.now();
+  if(l[0]&&l[0].tool===toolId&&l[0].term===term&&(now-l[0].ts)<60000){l[0].ts=now;l[0].ms=ms}
+  else l.unshift({tool:toolId,name,term,ts:now,ms,src});
+  saveLog(l);logBadge();
+}
+function ago(ts){const s2=(Date.now()-ts)/1000;
+  if(s2<60)return Math.max(1,Math.floor(s2))+'s ago';
+  if(s2<3600)return Math.floor(s2/60)+'m ago';
+  if(s2<86400)return Math.floor(s2/3600)+'h ago';
+  return Math.floor(s2/86400)+'d ago'}
+function renderLog(){
+  const l=loadLog();
+  let body='';
+  if(!l.length){
+    body=`<div class="state"><div class="big">📜</div><h3>LOG EMPTY</h3><p>Run any module and every lookup lands here — saved on YOUR device only. Nothing is uploaded anywhere.</p></div>`;
+  }else{
+    const byTool={};l.forEach(e=>byTool[e.name]=(byTool[e.name]||0)+1);
+    const summ=Object.entries(byTool).map(([n,c])=>`<span class="pill g">${esc(n)} ×${c}</span>`).join('');
+    const rows=l.map(e=>`
+      <div class="lg">
+        <span class="em">${ICON[e.tool]||'▸'}</span>
+        <span class="info"><span class="a">${esc(e.name)} — <span class="term">${esc(e.term)}</span></span>
+        <span class="b">${ago(e.ts)}${e.ms?' · '+e.ms+'ms':''}${e.src?' · '+esc(e.src):''}</span></span>
+        <span class="act"><button class="lgbtn" onclick="rerun(${e.ts})">▶ RE-RUN</button>
+        <button class="lgbtn del" onclick="delEntry(${e.ts})">✕</button></span>
+      </div>`).join('');
+    body=`<div class="pillrow" style="padding-bottom:4px">${summ}</div>
+      <div class="bar" style="margin:14px 0"></div>${rows}
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+        <button class="copyb" onclick="exportLog()">[ EXPORT .TXT ]</button>
+        <button class="lgbtn del" onclick="clearLog()">✕ CLEAR ALL</button>
+      </div>
+      <div class="hint" style="margin-top:12px">▸ Max 300 entries · stored only in this browser (localStorage) · server ko kabhi nahi jaata</div>`;
+  }
+  $('out').innerHTML=`<div class="res"><div class="res-h"><span class="t">▐ OPERATOR LOG // YOUR HISTORY</span><span class="chips"><span class="chip g">${l.length} ENTRIES</span><span class="chip">ON-DEVICE ONLY</span></span></div>
+    <div class="res-b">${body}</div></div>`;
+}
+function rerun(ts){
+  const e=loadLog().find(x=>x.ts===ts);if(!e)return;
+  const t=TOOLS.find(x=>x.id===e.tool);
+  if(t){select(t);$('q').value=e.term;$('rf').requestSubmit()}
+}
+function delEntry(ts){saveLog(loadLog().filter(x=>x.ts!==ts));logBadge();renderLog()}
+function clearLog(){if(confirm('Poora log delete kar dein? (is browser se)')){saveLog([]);logBadge();renderLog()}}
+function exportLog(){
+  const l=loadLog();
+  const txt=l.map(e=>[new Date(e.ts).toISOString(),e.name,e.term,e.ms||'',e.src||''].join(' | ')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([txt||'empty'],{type:'text/plain'}));
+  a.download='osint-hunter-log.txt';a.click();
+}
+$('tb_log').onclick=()=>select(LOGTOOL);
+
+const LBL={owner_name:'OWNER NAME',father_name:'FATHER/GUARDIAN',mobile_no:'NUMBER',alt_mobile:'ALT NUMBER',
+ address:'ADDRESS',circle:'CIRCLE/STATE',id_card:'ID REF',business_name:'BUSINESS',street_address:'STREET',
+ area:'AREA',city:'CITY',state:'STATE',pincode:'PINCODE',email:'EMAIL',website:'WEBSITE',telegram_id:'TG ID',
+ username:'USERNAME',name:'NAME',mobile:'NUMBER',phone:'PHONE',title:'PAGE TITLE',description:'DESCRIPTION',
+ imei:'IMEI',valid_check_digit:'CHECK DIGIT',reporting_body:'REPORTING BODY',tac:'TAC',fac_sn:'FAC/SERIAL',
+ check_digit:'CHECK DIGIT',note:'NOTE',roll:'ROLL',roll_code:'ROLL CODE',result:'RESULT',total_marks:'TOTAL',
+ raw_snippet:'PORTAL SNIPPET',emails:'EMAILS',phones:'PHONES',external_links:'LINKS',h1:'H1 HEADINGS',
+ size_kb:'PAGE SIZE'};
+const pretty=k=>LBL[k]||String(k).replace(/[_-]+/g,' ').toUpperCase();
+const chipG=t=>`<span class="chip g">${esc(t)}</span>`;
+
+function render(t,j){
+  const d=j.data||{};
+  const chips=[chipG(j.source||'gateway')];
+  if(j.cached)chips.push('<span class="chip y">CACHED</span>');
+  if(typeof j.ms==='number')chips.push(chipG(j.ms+'ms'));
+  let rows='',pills=[];
+  function fline(k,v){
+    const val=String(v).trim();
+    const mono=/^\+?[\d */#-]{6,}$/.test(val);
+    let out;
+    if(/^https?:\/\//.test(val)) out=`<a href="${esc(val)}" target="_blank" rel="noopener noreferrer" style="text-decoration:underline">${esc(val)}</a>`;
+    else out=mono?'<code>'+esc(val)+'</code>':esc(val);
+    return `<div class="fline"><div class="k">${esc(pretty(k))}</div><div class="v">${out}</div></div>`;
+  }
+  const skip=new Set(['ok','ms','api','success','query','endpoint','cached','stale','cache_age_s','fallback_used','primary_failed','tried']);
+  for(const[k,v]of Object.entries(d)){
+    if(skip.has(k)||v===''||v==null)continue;
+    if(Array.isArray(v)){
+      const items=v.map(x=>typeof x==='object'?JSON.stringify(x):String(x)).filter(Boolean);
+      if(items.length)pills.push([k,items]);
+    }else if(typeof v==='object'){
+      for(const[k2,v2]of Object.entries(v)){if(v2!==''&&v2!=null&&typeof v2!=='object')rows+=fline(k2,v2)}
+    }else rows+=fline(k,v);
+  }
+  let body=rows?`<div>${rows}</div>`:'';
+  pills.forEach(([k,list])=>{
+    body+=`<div class="sect">${esc(pretty(k))}</div><div class="pillrow">${list.slice(0,50).map(i=>`<span class="pill">${esc(i)}</span>`).join('')}</div>`;
+  });
+  /* records[] (numpro/aadhaarpro) — har record ka chhota card */
+  const recs=d.records;
+  if(Array.isArray(recs)&&recs.length){
+    body+=`<div class="sect">LINKED RECORDS (${recs.length})</div>`;
+    recs.slice(0,12).forEach((r,i)=>{
+      let inner='';
+      for(const[k,v]of Object.entries(r)){
+        if(v===''||v==null)continue;
+        inner+=`<div class="fline"><div class="k">${esc(pretty(k))}</div><div class="v">${esc(String(v).trim())}</div></div>`;
+      }
+      if(inner)body+=`<div class="rec"><div class="rec-h">#${i+1}</div>${inner}</div>`;
+    });
+  }
+  if(!body)body=`<div class="state"><div class="big">🔍</div><h3>NO DISPLAYABLE FIELDS</h3><p>Record found but the source returned no readable fields.</p></div>`;
+  $('out').innerHTML=`<div class="res">
+    <div class="res-h"><span class="t">▐ OUTPUT // ${esc(t.name)}</span><span class="chips">${chips.join('')}</span></div>
+    <div class="res-b">${body}</div>
+    <div class="res-f"><span class="l">TARGET: <b style="color:var(--mut)">${esc($('q').value.trim())}</b> · public sources + own datasets · not a private DB</span>
+    <button class="copyb" onclick="copyRes(this)">[ COPY OUTPUT ]</button></div></div>`;
+}
+function copyRes(b){
+  const txt=$('out').innerText.replace(/\n{2,}/g,'\n').trim();
+  navigator.clipboard?.writeText(txt).then(()=>{const o=b.textContent;b.textContent='[ COPIED ✓ ]';setTimeout(()=>b.textContent=o,1200)});
+}
+
+/* ═══════════ EXECUTE ═══════════ */
+async function callProxy(t,term){
+  const r=await fetch(`${PROXY}?tool=${encodeURIComponent(t.tool)}&term=${encodeURIComponent(term)}`);
+  let j=null;try{j=await r.json()}catch(_){}
+  return{r,j};
+}
+async function callDirect(t,term){
+  if(!DIRECT_KEY)throw new Error('SETUP');
+  const r=await fetch(`${DIRECT_BASE}?key=${encodeURIComponent(DIRECT_KEY)}&tool=${encodeURIComponent(t.tool)}&term=${encodeURIComponent(term)}`);
+  let j=null;try{j=await r.json()}catch(_){}
+  return{r,j};
+}
+function friendly(st,j){
+  const why=(j&&j.why)||'';
+  if(st===401)return'Gateway rejected the site key. Owner: check WEB_KEY / GATEWAY_KEY env or DIRECT_KEY config.';
+  if(st===403&&why==='tool_not_allowed')return'This module is not enabled on the site key. Owner can tick it in Key Studio.';
+  if(st===429||why==='rate_limit'||why==='daily_limit')return(j&&(j.msg||''))||'Rate limit hit. Try again shortly.';
+  if(why==='validation')return(j&&j.msg)||'Check the input format.';
+  if(why==='timeout'||why==='upstream')return'All sources for this module are busy right now. Re-execute in a few seconds.';
+  return(j&&j.msg)||'Execution failed. Try again.';
+}
+$('rf').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const t=CUR,v=$('q').value.trim();
+  $('err').innerHTML='';
+  if(!v)return;
+  const chk=t.val(v);                       // v7.2 FIX: true = VALID tha, error nahi!
+  if(chk!==true){$('err').innerHTML=`<div class="errbox">⚠ ${esc(chk||'Invalid input format.')}</div>`;return}
+  const term=t.id==='v2m'?v.toUpperCase().replace(/\s+/g,''):v;
+  $('go').disabled=true;$('go').textContent='▮ RUNNING…';
+  $('out').innerHTML=`<div class="state"><div class="spin"></div><h3>EXECUTING ${esc(t.name)}…</h3><p>Querying through the secure proxy. Cached targets return instantly.</p></div>`;
+  try{
+    let r,j,proxy=true;
+    try{({r,j}=await callProxy(t,term))}
+    catch(pe){
+      try{({r,j}=await callDirect(t,term));proxy=false}
+      catch(de){throw new Error('NET')}
+      if(j&&j.ok===false&&r.status===404&&!DIRECT_KEY)throw new Error('SETUP');
+    }
+    if(j===null&&r&&r.status===404){({r,j}=await callDirect(t,term));proxy=false}
+    if(!j)throw new Error('NET');
+    if(j.ok){
+      SESS++;$('sess').textContent='SESSION QUERIES: '+SESS;
+      addHistory(t.id,t.name,term,j.ms||0,j.source||'');
+      render(t,j);
+      $('err').innerHTML=proxy?'':'<div class="okline">ℹ DIRECT MODE active (no serverless proxy detected). For full key protection deploy <b>api/lookup.js</b> — see deploy guide.</div>';
+    }else if((j.why||'')==='notfound'){
+      SESS++;$('sess').textContent='SESSION QUERIES: '+SESS;
+      addHistory(t.id,t.name,term,j.ms||0,j.source||'');
+      $('out').innerHTML=`<div class="state"><div class="big">🕳️</div><h3>NO RECORDS FOUND</h3><p>Nothing matched <b>${esc(v)}</b> in any connected source.</p></div>`;
+    }else{
+      $('out').innerHTML='';$('err').innerHTML=`<div class="errbox">✖ ${esc(friendly(r.status,j))}</div>`;
+    }
+  }catch(err){
+    const m=String(err.message||err);
+    $('out').innerHTML='';
+    $('err').innerHTML=`<div class="errbox">✖ ${esc(m==='SETUP'?'SETUP NEEDED: deploy api/lookup.js (recommended) or paste a Key-Studio scoped key into DIRECT_KEY inside this file.':'Network fault — sources may be waking up. Re-execute in a few seconds.')}</div>`;
+  }finally{
+    $('go').disabled=false;$('go').textContent='▶ EXECUTE';
+  }
+});
+
+/* '/' focuses terminal input */
+addEventListener('keydown',e=>{
+  if(e.key==='/'&&document.activeElement!==$('q')){e.preventDefault();select(CUR)}
+});
+
+/* mobile */
+$('bg').onclick=()=>$('nl').classList.toggle('open');
+document.querySelectorAll('#nl a').forEach(a=>a.onclick=()=>$('nl').classList.remove('open'));
+
+logBadge();
+select(TOOLS[0]);
+</script>
+</body>
+</html>

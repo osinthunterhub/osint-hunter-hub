@@ -1,0 +1,69 @@
+services:
+  - type: web
+    name: osint-hunter-hub-bot
+    runtime: python
+    region: singapore
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    autoDeploy: true
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_ID
+        sync: false   # private numeric admin ID; set in Render dashboard only
+      - key: FORCE_CHANNEL
+        value: -1004393596502
+      - key: FORCE_CHANNEL_LINK
+        value: https://t.me/osint_xpert
+      - key: FORCE_CHANNEL_USERNAME
+        value: osint_xpert
+      - key: OWNER_USERNAME
+        value: "@ANONYMOUS_XH"
+      - key: BRAND_TAG
+        value: "@ANONYMOUS_XH"
+      - key: MYNUM_API_URL
+        value: https://utility-api-vu83.onrender.com/api
+      - key: MYNUM_API_KEY
+        sync: false
+      # v2.17 — RC / engine tools bhi gateway se (pehle public repo me hardcoded thi)
+      - key: GATEWAY_KEY
+        sync: false
+      # v2.17 — bot cache 12h (gateway 30 din cache karta hai, bot ko bhi lamba chahiye)
+      - key: BOT_CACHE_TTL
+        value: "43200"
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: SESSION_STRING
+        sync: false
+      - key: PORT
+        value: 10000
+      - key: UPI_ID
+        value: kumaranil98787@axl
+      - key: UPI_NAME
+        value: OSINT Hunter Hub
+      - key: FREE_CREDITS
+        value: 10
+      - key: TG_CREDITS
+        value: 3
+      - key: FREE_FOR_ALL
+        value: "1"   # 1 = sab tools FREE (premium off) | 0 = premium/paywall ON
+      - key: FAMINFO_API_URL
+        value: https://utility-api-vu83.onrender.com/api
+      - key: FAMINFO_API_KEY
+        sync: false   # Render Dashboard -> Environment me daalo (code me hardcode NAHI)
+      - key: FAMINFO_API_TIMEOUT
+        value: 40
+      - key: UPIINFO_API_URL
+        value: https://utility-api-vu83.onrender.com/api
+      - key: UPIINFO_API_KEY
+        sync: false   # Render Dashboard -> Environment me daalo (code me hardcode NAHI)
+      - key: UPIINFO_API_TIMEOUT
+        value: 30
+      - key: BOT_SELF_URL
+        value: https://osint-hunter-hub-bot.onrender.com
+      - key: WEBHOOK_URL
+        value: https://osint-hunter-hub-bot.onrender.com/webhook

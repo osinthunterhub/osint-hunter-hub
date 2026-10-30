@@ -1,0 +1,21 @@
+.env
+*.session
+*.session-journal
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+botdata.db
+*.log
+downloads/
+exports/
+*.zip
+.vscode/
+.idea/
+
+# v2.1 — DB files repo me kabhi na jaayein
+*.db
+*.db-wal
+*.db-shm
+*.db-journal

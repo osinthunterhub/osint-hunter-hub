@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Key Studio — HIMANSHU API</title>
+<style>
+  :root{--bg:#0a0f18;--card:#111a2b;--card2:#0d1522;--bdr:#1e2a44;--txt:#e8eef8;--mut:#8ba0bf;
+        --acc:#5eead4;--acc2:#818cf8;--ok:#22c55e;--bad:#ef4444;--warn:#f59e0b}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1100px 550px at 15% -10%,#122a4a 0%,transparent 60%),
+       radial-gradient(900px 500px at 92% 0%,#1d1a4a 0%,transparent 60%),var(--bg);
+       color:var(--txt);font-family:Inter,system-ui,Segoe UI,sans-serif;line-height:1.55}
+  .wrap{max-width:1050px;margin:0 auto;padding:22px 18px 80px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+         border-bottom:1px solid var(--bdr);padding-bottom:14px;margin-bottom:20px}
+  .logo{font-weight:800;font-size:19px}
+  .logo span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;
+             -webkit-text-fill-color:transparent}
+  .badge{font-size:11px;border:1px solid var(--bdr);background:var(--card2);padding:3px 9px;border-radius:999px;color:var(--mut)}
+  h1{font-size:25px;margin:0 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--mut);font-size:14px;margin:0 0 18px}
+  .card{background:var(--card);border:1px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:14px}
+  label{font-size:12px;color:var(--mut);display:block;margin:10px 0 5px;text-transform:uppercase;letter-spacing:.05em}
+  input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--bdr);
+               background:#080f1a;color:var(--txt);font-size:13.5px}
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media(max-width:700px){.row{grid-template-columns:1fr}}
+  .tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:8px;margin-top:8px}
+  .tool{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--bdr);
+        border-radius:10px;padding:8px 10px;font-size:13px;cursor:pointer;transition:.12s}
+  .tool:hover{border-color:#2c3d63}
+  .tool.on{border-color:var(--acc);background:#0d2b2b}
+  .tool input{width:auto;accent-color:var(--acc)}
+  .tool .tag{font-size:9.5px;color:var(--mut);border:1px solid var(--bdr);padding:1px 5px;border-radius:5px;margin-left:auto}
+  button{cursor:pointer;font-weight:700;border-radius:11px;padding:11px 18px;font-size:14px;border:1px solid transparent}
+  button.pri{background:linear-gradient(90deg,#0ea5e9,#8b5cf6);color:#fff}
+  button.sec{background:var(--card2);border-color:var(--bdr);color:var(--txt)}
+  .btns{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  pre{background:#070d16;border:1px solid var(--bdr);border-radius:10px;padding:11px;overflow:auto;
+      font-size:12.5px;white-space:pre-wrap;word-break:break-all;margin:6px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .keybox{background:#08130f;border:1px solid #14532d;border-radius:12px;padding:12px;margin:10px 0}
+  .keybox b{color:var(--ok)}
+  .urlrow{display:flex;gap:8px;align-items:center;background:var(--card2);border:1px solid var(--bdr);
+          border-radius:10px;padding:8px 10px;margin:6px 0;font-size:12.5px}
+  .urlrow code{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .copy{background:#16233a;border:1px solid var(--bdr);color:var(--mut);font-size:11px;padding:5px 9px;border-radius:7px;cursor:pointer}
+  .copy:hover{color:var(--txt)}
+  .err{color:var(--bad);font-size:13px;margin-top:8px}
+  .hint{color:var(--mut);font-size:12.5px}
+  .ok{color:var(--ok)}
+  .lock{max-width:420px;margin:40px auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">⚡ <span>HIMANSHU</span> API · Key Studio</div>
+    <div><span class="badge" id="ver">v—</span>
+      <a href="/" style="color:var(--acc);font-size:13px;margin-left:10px">Home</a>
+      <a href="/dashboard" style="color:var(--acc);font-size:13px;margin-left:8px">Dashboard</a></div>
+  </header>
+
+  <h1>Apni API key banao — sirf chune hue tools ke liye</h1>
+  <p class="sub">User ko sirf wahi tools dena jo aap dena chahte ho. Ek key se baaki tools <b>band</b> rahenge (403),
+     isliye ek key leak hone se poora system expose nahi hota.</p>
+
+  <div id="loginCard" class="card lock" style="display:none">
+    <label>Owner key (GATEWAY_KEY)</label>
+    <input id="ownerKey" type="password" placeholder="Render → Environment → GATEWAY_KEY">
+    <div class="btns"><button class="pri" onclick="doLogin()">Login</button></div>
+    <div class="err" id="loginErr"></div>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="card">
+      <label>1 · Kaun (label)</label>
+      <input id="label" placeholder="jaise: rahul-app">
+      <div class="row" style="margin-top:4px">
+        <div><label>Daily limit</label><input id="daily" type="number" value="200" min="0"></div>
+        <div><label>Expiry</label>
+          <select id="exp"><option value="perm" selected>♾ Lifetime (never expires)</option>
+            <option value="30d">30 din</option><option value="7d">7 din</option><option value="1d">1 din</option>
+          </select></div>
+        <div><label>Per-minute</label><input id="lpm" type="number" value="60" min="0"></div>
+      </div>
+
+      <label style="margin-top:14px">2 · Kaun se tools? (jo tick karoge sirf wahi chalenge)</label>
+      <div class="btns" style="margin:6px 0 0">
+        <button class="sec" onclick="pickAll(true)">Select all</button>
+        <button class="sec" onclick="pickAll(false)">Clear</button>
+      </div>
+      <div class="tools" id="tools"></div>
+
+      <div class="btns">
+        <button class="pri" onclick="createKey()">🔑 Key + URL banao</button>
+        <button class="sec" onclick="resetOut()">Reset</button>
+      </div>
+      <div class="err" id="err"></div>
+    </div>
+
+    <div id="out" class="card" style="display:none">
+      <div class="keybox">
+        <b>✅ Key ban gayi</b> — ye poori key sirf <b>ek baar</b> dikhti hai, abhi copy kar lo.
+        <pre id="keyOut" style="background:#04120c;border-color:#14532d"></pre>
+        <button class="copy" onclick="copyText(document.getElementById('keyOut').textContent.trim())">Copy key</button>
+      </div>
+      <label>Ready URLs (seedha bhej do)</label>
+      <div id="urls"></div>
+      <label style="margin-top:12px">cURL example</label>
+      <pre id="curlOut"></pre>
+      <p class="hint" id="scopeNote"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+let TOOLS = {};
+const $ = (id) => document.getElementById(id);
+
+fetch('/health').then(r => r.json()).then(d => { $('ver').textContent = 'v' + (d.version || '—'); }).catch(()=>{});
+
+fetch('/api/owner/whoami').then(r => r.json()).then(j => {
+  if (j.ok) start(); else $('loginCard').style.display = 'block';
+}).catch(() => $('loginCard').style.display = 'block');
+
+function doLogin() {
+  const k = $('ownerKey').value.trim();
+  if (!k) { $('loginErr').textContent = 'Key daalo'; return; }
+  $('loginErr').textContent = 'Check kar raha hoon…';
+  fetch('/api/owner/login', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({key:k})})
+    .then(r => r.json().then(j => ({s:r.status, j})))
+    .then(({s, j}) => {
+      if (j.ok) { $('loginCard').style.display='none'; start(); }
+      else $('loginErr').textContent = '❌ Galat key (' + s + ')';
+    }).catch(e => $('loginErr').textContent = 'Error: ' + e);
+}
+
+function start() {
+  $('app').style.display = 'block';
+  fetch('/tools').then(r => r.json()).then(j => {
+    TOOLS = j.tools || {};
+    const box = $('tools'); box.innerHTML = '';
+    Object.keys(TOOLS).sort().forEach(name => {
+      const t = TOOLS[name];
+      const live = (t.status || 'live') === 'live';
+      const d = document.createElement('div');
+      d.className = 'tool';
+      d.innerHTML = `<input type="checkbox" value="${name}" ${live ? '' : 'disabled'}>
+        <span>${name}</span><span class="tag">${live ? 'live' : 'down'}</span>`;
+      d.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'INPUT') { const cb = d.querySelector('input');
+          if (!cb.disabled) { cb.checked = !cb.checked; } }
+        d.classList.toggle('on', d.querySelector('input').checked);
+      });
+      box.appendChild(d);
+    });
+  });
+}
+
+function pickAll(on) {
+  document.querySelectorAll('#tools input').forEach(cb => {
+    if (!cb.disabled) { cb.checked = on; cb.closest('.tool').classList.toggle('on', on); }
+  });
+}
+function resetOut(){ $('out').style.display='none'; $('err').textContent=''; }
+
+function copyText(t, el) {
+  navigator.clipboard?.writeText(t).then(() => {
+    if (el) { const o = el.textContent; el.textContent = 'copied ✓'; setTimeout(()=>el.textContent=o, 1200); }
+  });
+}
+
+function createKey() {
+  const picked = [...document.querySelectorAll('#tools input:checked')].map(c => c.value);
+  if (!picked.length) { $('err').textContent = 'Kam se kam ek tool chuno.'; return; }
+  const label = ($('label').value || 'user-' + Math.random().toString(36).slice(2,6)).trim();
+  $('err').textContent = 'Bana raha hoon…';
+  fetch('/api/keys/create', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({label, exp: $('exp').value, daily: Number($('daily').value) || 200,
+                          tools: picked.join('+'), signed: true})})
+    .then(r => r.json().then(j => ({s:r.status, j})))
+    .then(({s, j}) => {
+      if (!j.ok) { $('err').textContent = '❌ ' + (j.msg || JSON.stringify(j).slice(0,150)); return; }
+      $('err').textContent = '';
+      const key = j.entry.key;
+      $('keyOut').textContent = key;
+      const urls = j.ready_urls || {};
+      $('urls').innerHTML = Object.entries(urls).map(([tool, url]) =>
+        `<div class="urlrow"><code>${url}</code>
+          <button class="copy" onclick="copyText('${url}', this)">copy</button></div>`).join('');
+      const first = Object.values(urls)[0] || '';
+      $('curlOut').textContent = `curl "${first}"`;
+      $('scopeNote').textContent = 'Ye key SIRF ' + picked.length + ' tool(s) par chalegi: ' + picked.join(', ') +
+        ' — baaki sab par 403 tool_not_allowed.';
+      $('out').style.display = 'block';
+      $('out').scrollIntoView({behavior:'smooth', block:'nearest'});
+    }).catch(e => { $('err').textContent = 'Error: ' + e; });
+}
+</script>
+</body>
+</html>
