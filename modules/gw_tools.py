@@ -36,6 +36,11 @@ API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-v2.onrender.com/api").
 API_KEY = os.getenv("MYNUM_API_KEY", "").strip()
 TIMEOUT = int(os.getenv("GW_TIMEOUT", "20"))  # v2.17
 
+# v2.24.1 DEEP-FIX: jin tools ke upstream provider (sarkariallupdates 509 / x-trace
+# endpoint-change) band hain, unpe lamba wait bekaar hai — FAIL-FAST lagao (seconds).
+FAST_FAIL_TOOLS = {"familyinfo": 9, "vehicletomobile": 9, "aadhaar2pan": 9,
+                   "lpg": 5, "aadhaar": 9}
+
 # Gateway / tool infra keys — user ko nahi dikhani (noise ya secret)
 
 
@@ -51,7 +56,7 @@ def _call(tool: str, term: str) -> Dict[str, Any]:
         r = get_session().get(
             API_URL,
             params={"key": API_KEY, "tool": tool, "term": term},
-            timeout=(5, TIMEOUT),
+            timeout=(5, FAST_FAIL_TOOLS.get(tool, TIMEOUT)),
         )
         ms = int((time.time() - t0) * 1000)
         if r.status_code != 200:
@@ -67,6 +72,8 @@ def _call(tool: str, term: str) -> Dict[str, Any]:
             if why.lower() in ("notfound", "not_found", "no record found"):
                 return {"ok": False, "not_found": True, "error": "Data not found."}
             # v2.17 — technical 'upstream/degraded' user ko saaf bhasha me
+            if why.lower() == "timeout" and tool in FAST_FAIL_TOOLS:
+                return {"ok": False, "error": "⚙️ Ye source provider thodi der ke liye band hai — 2-3 min baad try karo.", "tech": why}
             _tech = {"upstream": "service abhi available nahi hai (source down) — thodi der baad try karo",
                      "degraded": "service abhi available nahi hai — owner ko notify kar diya gaya",
                      "timeout": "source slow hai — thodi der baad try karo",
