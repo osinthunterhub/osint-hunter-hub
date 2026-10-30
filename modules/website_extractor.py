@@ -48,10 +48,10 @@ HEADERS = {
     "Connection": "keep-alive",
 }
 
-_session = requests.Session()
-_adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=20, max_retries=1)
-_session.mount("http://", _adapter)
-_session.mount("https://", _adapter)
+# v2.24.2 FIX: FastSession (pool+retry+timeout built-in) — pura requests.Session()
+# fasthttp-shim me nahi hota → boot-time AttributeError → PTB loop kabhi start nahi
+# hota tha (sab updates DROP ho rahe the!). Ab poora bot zinda.
+_session = requests.FastSession(default_timeout=25.0)
 
 # junk jo email/phone regex me aa jaata hai
 _BAD_MAIL_DOMAIN = ("example.com", "example.org", "sentry.io", "wixpress.com",
