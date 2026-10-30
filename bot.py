@@ -31,6 +31,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
+# telegram imports UPFRONT (annotations use Update/ParseMode before line 250)
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
+from telegram.constants import ChatAction, ParseMode
+from telegram.error import BadRequest
+
 import threading
 import traceback
 from http.server import HTTPServer, BaseHTTPRequestHandler
