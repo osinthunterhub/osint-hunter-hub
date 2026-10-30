@@ -308,8 +308,8 @@ def fetch_matric(roll_code, roll_no) -> dict:
 # ======================================================================
 def _inter_session():
     """Inter portal ke liye apna chhota session (cookies chahiye)."""
-    import fasthttp as requests
-    s = requests.Session()
+    import fasthttp
+    s = fasthttp.FastSession(default_timeout=20.0)
     s.headers.update({
         "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"),

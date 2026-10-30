@@ -99,7 +99,7 @@ async def _run_with_typing(update, context, work):
             await task
         except asyncio.CancelledError:
             pass
-BOT_VERSION = ("v2.24.1 SUPERCHARGED ⚡fasthttp — owner HIMANSHU · @ANONYMOUS_XH · admin ID private Render config")
+BOT_VERSION = ("v2.24.2 SUPERCHARGED ⚡fasthttp — owner HIMANSHU · @ANONYMOUS_XH · admin ID private Render config")
 # v2.0 SECURITY: token sirf Render env se (pehle public repo me hardcoded tha!)
 BOT_TOKEN = os.getenv('BOT_TOKEN', '').strip()
 PORT = int(os.getenv('PORT','10000'))

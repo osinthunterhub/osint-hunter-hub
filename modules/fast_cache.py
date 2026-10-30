@@ -8,28 +8,23 @@ import os
 import time
 import threading
 import functools
-import fasthttp as requests
+import fasthttp
+from fasthttp import FastSession
 from typing import Any, Dict, Optional
 
 # Global session with connection pooling - reuse for speed
 _session = None
 _session_lock = threading.Lock()
 
-def get_session() -> requests.Session:
+def get_session():
+    """v2.24.2 FIX: FastSession (fasthttp shim) — pooling+retry+timeout built-in.
+    Pehle requests.Session() attr-gone crash karta tha (import-time AttributeError
+    → NUMBER INFO module poora load hi nahi hota tha)."""
     global _session
     if _session is None:
         with _session_lock:
             if _session is None:
-                s = requests.Session()
-                # Connection pooling: 20 connections, keep-alive
-                adapter = requests.adapters.HTTPAdapter(
-                    pool_connections=20,
-                    pool_maxsize=20,
-                    max_retries=2,
-                    pool_block=False
-                )
-                s.mount('http://', adapter)
-                s.mount('https://', adapter)
+                s = FastSession(default_timeout=25.0)
                 s.headers.update({
                     'User-Agent': 'OSINT-Hunter-Hub/2.0 Fast',
                     'Accept': 'application/json',
