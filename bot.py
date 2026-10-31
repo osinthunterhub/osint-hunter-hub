@@ -214,7 +214,10 @@ def process_update_sync(data):
                 _UPSTATS["futerr"] = str(_fe)[:120]
         else:
             _UPSTATS["noloop"] = _UPSTATS.get("noloop", 0) + 1
-            print("Loop/App not ready, dropping update", data.get('update_id'))
+            _UPSTATS["seen_loop"] = repr(loop)[:40]
+            _UPSTATS["seen_app"] = repr(app)[:40]
+            _UPSTATS["mod"] = __name__
+            print("Loop/App not ready, dropping update", data.get('update_id'), "| loop:", repr(loop)[:60], "| app:", repr(app)[:60], "| mod:", __name__, flush=True)
     except Exception as e:
         print(f"process_update_sync error: {e}")
         traceback.print_exc()
