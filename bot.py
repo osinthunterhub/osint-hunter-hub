@@ -130,20 +130,19 @@ class WebhookHandler(BaseHTTPRequestHandler):
                     _ts = globals().get("START_TS")
                     _up = int((time.time() - _ts) / 60) if _ts else 0
                     _bv = str(globals().get("BOT_VERSION", "v2.24.x"))
-                    self.wfile.write(
-                        "<html><body><h1>🚀 OSINT Hunter Hub — LIVE ⚡</h1>"
-                        f"<p>{_bv}</p>"
-                        f"<p>commit {_c} · uptime {_up} min · ⚡fasthttp engine</p>"
-                        + (lambda _vs: (
-                            "<p>vault: " + ("ON" if _vs.get("token_set") else ("OFF" if globals().get("VAULT_OK") is False else "…"))
-                            + " | backups: " + str(_vs.get("count", 0))
-                            + " | last-ok: " + str(_vs.get("age_s", "-")) + "s"
-                            + " | db_users: " + str(_vs.get("db_users", 0))
-                            + (("| err: " + str(_vs.get("last_err"))[:140]) if _vs.get("last_err") else "")
-                            + "</p>"
-                          ))(globals().get("_VAULT_SNAP") or {})
-                        + "</body></html>"
-                        .encode('utf-8', 'ignore'))
+                    _vs = globals().get("_VAULT_SNAP") or {}
+                    _vline = ("<p>vault: " + ("ON" if _vs.get("token_set") else ("OFF" if globals().get("VAULT_OK") is False else "…"))
+                              + " | backups: " + str(_vs.get("count", 0))
+                              + " | last-ok: " + str(_vs.get("age_s", "-")) + "s"
+                              + " | db_users: " + str(_vs.get("db_users", 0))
+                              + (("| err: " + str(_vs.get("last_err"))[:140]) if _vs.get("last_err") else "")
+                              + "</p>")
+                    _html = ("<html><body><h1>🚀 OSINT Hunter Hub — LIVE ⚡</h1>"
+                             f"<p>{_bv}</p>"
+                             f"<p>commit {_c} · uptime {_up} min · ⚡fasthttp engine</p>"
+                             + _vline
+                             + "</body></html>")
+                    self.wfile.write(_html.encode('utf-8', 'ignore'))
                 except Exception:
                     self.wfile.write(b'LIVE v2.24.8')
             elif self.path == '/webhook':
