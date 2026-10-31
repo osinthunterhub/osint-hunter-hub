@@ -196,33 +196,36 @@ class WebhookHandler(BaseHTTPRequestHandler):
     
     def log_message(self, *args): pass
 
+_UPQ = []  # v2.26.4f: webhook→queue→main-loop-consumer (threadsafe-loop-ki-jagah — single-loop-guarantee)
+
 def process_update_sync(data):
     try:
-        global loop
         _UPSTATS["thread"] = _UPSTATS.get("thread", 0) + 1
-        # v2.26.4b: app/loop boot-tak MAX 240s intezar (0.5s steps) — early-inject-drop-band
-        _ready = False
-        for _ in range(480):
-            if loop and app:
-                _ready = True
-                break
-            time.sleep(0.5)
-        if _ready:
-            _fut = asyncio.run_coroutine_threadsafe(handle_update(data), loop)
-            _UPSTATS["sched"] = _UPSTATS.get("sched", 0) + 1
-            try:
-                _fut.result(timeout=30)
-            except Exception as _fe:
-                _UPSTATS["futerr"] = str(_fe)[:120]
-        else:
-            _UPSTATS["noloop"] = _UPSTATS.get("noloop", 0) + 1
-            _UPSTATS["seen_loop"] = repr(loop)[:40]
-            _UPSTATS["seen_app"] = repr(app)[:40]
-            _UPSTATS["mod"] = __name__
-            print("Loop/App not ready, dropping update", data.get('update_id'), "| loop:", repr(loop)[:60], "| app:", repr(app)[:60], "| mod:", __name__, flush=True)
+        if len(_UPQ) < 500:
+            _UPQ.append(data)
+            _UPSTATS["q"] = len(_UPQ)
     except Exception as e:
         print(f"process_update_sync error: {e}")
         traceback.print_exc()
+
+
+async def _upqueue_consumer():
+    """v2.26.4f — main-loop ke andar hi webhook-updates process (thread-crossing-khatam)."""
+    while True:
+        try:
+            if _UPQ:
+                data = _UPQ.pop(0)
+                _UPSTATS["q"] = len(_UPQ)
+                try:
+                    await handle_update(data)
+                except Exception as _he:
+                    _UPSTATS["err"] += 1
+                    print(f"consumer-handle err: {_he}", flush=True)
+            else:
+                await asyncio.sleep(0.3)
+        except Exception as _ce:
+            print(f"consumer-loop err: {_ce}", flush=True)
+            await asyncio.sleep(2)
 
 _UPSTATS = {"recv": 0, "err": 0}
 
@@ -3186,6 +3189,8 @@ async def main_async():
         pass
 
     print("10 TOOLS + PAYMENTS + CREDITS + ADMIN FAST STABLE WEBHOOK READY!")
+    app.create_task(_upqueue_consumer())
+    print("upqueue-consumer ON", flush=True)
     while True:
         LOOP_TS = time.time()
         await asyncio.sleep(60)
