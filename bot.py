@@ -135,7 +135,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
                               + " | backups: " + str(_vs.get("count", 0))
                               + " | last-ok: " + str(_vs.get("age_s", "-")) + "s"
                               + " | db_users: " + str(_vs.get("db_users", 0))
-                              + " | ups: " + str(globals().get("_UPSTATS", {}).get("recv", 0)) + "/" + str(globals().get("_UPSTATS", {}).get("err", 0)) + " | loop: " + (str(int(time.time() - globals().get("LOOP_TS", 0))) + "s" if globals().get("LOOP_TS") else "DEAD")
+                              + " | ups: " + str(globals().get("_UPSTATS", {})) + " | loop: " + (str(int(time.time() - globals().get("LOOP_TS", 0))) + "s" if globals().get("LOOP_TS") else "DEAD")
                               + (("| err: " + str(_vs.get("last_err"))[:140]) if _vs.get("last_err") else "")
                               + "</p>")
                     _html = ("<html><body><h1>🚀 OSINT Hunter Hub — LIVE ⚡</h1>"
@@ -199,14 +199,21 @@ class WebhookHandler(BaseHTTPRequestHandler):
 def process_update_sync(data):
     try:
         global loop
+        _UPSTATS["thread"] = _UPSTATS.get("thread", 0) + 1
         # Wait for loop to be ready max 5 sec
         for _ in range(50):
             if loop and app:
                 break
             time.sleep(0.1)
         if loop and app:
-            asyncio.run_coroutine_threadsafe(handle_update(data), loop)
+            _fut = asyncio.run_coroutine_threadsafe(handle_update(data), loop)
+            _UPSTATS["sched"] = _UPSTATS.get("sched", 0) + 1
+            try:
+                _fut.result(timeout=30)
+            except Exception as _fe:
+                _UPSTATS["futerr"] = str(_fe)[:120]
         else:
+            _UPSTATS["noloop"] = _UPSTATS.get("noloop", 0) + 1
             print("Loop/App not ready, dropping update", data.get('update_id'))
     except Exception as e:
         print(f"process_update_sync error: {e}")
