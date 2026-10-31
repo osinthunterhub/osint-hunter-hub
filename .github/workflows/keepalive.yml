@@ -1,0 +1,18 @@
+# ⚡ BACKUP KEEP-ALIVE (master utility-api repo me hai; ye redundancy layer)
+name: keepalive
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in \
+            "https://osint-hunter-hub-bot-zm5u.onrender.com/health" \
+            "https://utility-api-we9m.onrender.com/health"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$u" || echo 000)
+            echo "[$(date -u +%H:%M:%S)] $code  $u"
+          done
