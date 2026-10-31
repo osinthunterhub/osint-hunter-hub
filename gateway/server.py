@@ -407,7 +407,6 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0a1226;border:1px sol
 <option value="pincode">pincode — sirf PINCODE INFO</option>
 <option value="vehicle">vehicle — sirf RC/VEHICLE</option>
 <option value="tgnum">tgnum — sirf TELEGRAM NUMBER</option>
-<option value="challan">challan — sirf E-CHALLAN</option>
 <option value="phonebiz">phonebiz — Phone → Business Info</option>
 <option value="num+familyinfo">num+familyinfo — 2 tools (Number + Family)</option>
 <option value="num+familyinfo+vehicle">num+familyinfo+vehicle — 3 tools</option>
@@ -517,13 +516,13 @@ function genKey(){
   document.getElementById('f_key').value=s;
 }
 function getSampleTerm(tool){
-  const samples={num:'9876543210',familyinfo:'401635555849',aadhar:'401635555849',gst:'19BOKPS7056D1ZI',ip:'8.8.8.8',ifsc:'SBIN0000001',pincode:'110001',paknum:'03001234567',vehicle:'BR01AB1234',tgnum:'@username',pakvehicle:'ABC123',tower:'9876543210',challan:'DL8CAB1234',fastag:'RJ14CV0002',phonebiz:'9985814792'};
+  const samples={num:'9876543210',familyinfo:'401635555849',aadhar:'401635555849',gst:'19BOKPS7056D1ZI',ip:'8.8.8.8',ifsc:'SBIN0000001',pincode:'110001',paknum:'03001234567',vehicle:'BR01AB1234',tgnum:'@username',pakvehicle:'ABC123',tower:'9876543210',fastag:'RJ14CV0002',phonebiz:'9985814792'};
   return samples[tool]||'VALUE';
 }
 function buildReadyUrls(key, toolsRaw){
   const host=HOST;
   let tools=[];
-  if(!toolsRaw || toolsRaw==='*' || toolsRaw==='all'){tools=['num','familyinfo','aadhar','gst','ip','ifsc','pincode','paknum','vehicle','tgnum','pakvehicle','tower','challan','fastag','phonebiz'];}
+  if(!toolsRaw || toolsRaw==='*' || toolsRaw==='all'){tools=['num','familyinfo','aadhar','gst','ip','ifsc','pincode','paknum','vehicle','tgnum','pakvehicle','tower','fastag','phonebiz'];}
   else{tools=toolsRaw.split(/[+|,;]+/).map(t=>t.trim()).filter(Boolean);}
   const box=document.getElementById('readyBox');
   const cont=document.getElementById('readyUrls');
@@ -658,9 +657,9 @@ class H(BaseHTTPRequestHandler):
             "/num_info": "num", "/aadhar_info": "aadhaar2num", "/aadhaar_info": "aadhaar2num",
             "/family_info": "familyinfo", "/rc_num": "vehicletomobile",
             "/truecaller_info": "tc", "/tg_info": "tgnum", "/vehicle_info": "vehicle",
-            "/dl_info": "dl", "/fastag_info": "fastag", "/imei_info": "imei",
-            "/challan_info": "challan", "/ip_info": "ip", "/web_extract": "webextract",
-            "/phonebiz_info": "phonebiz", "/lpg_info": "lpg",
+            "/fastag_info": "fastag", "/imei_info": "imei",
+           "/ip_info": "ip", "/web_extract": "webextract",
+            "/phonebiz_info": "phonebiz",
             "/upi_info": "upi",  # v2.24.6 — LakshitX upi-verify
             "/insta_info": "insta", "/instagram_info": "insta",  # v2.24.7 — native
         }
@@ -705,7 +704,7 @@ class H(BaseHTTPRequestHandler):
         if p in ("/api/docs","/docs"):
             self._send(200,{"service":"HIMANSHU API","owner":"HIMANSHU","telegram":"@ANONYMOUS_XH","version":U.VERSION,"base":f"https://{host}",
                             "auth":"GATEWAY_KEY owner unlimited, API_KEYS demo/bikau expiry+daily:tools",
-                            "personal_api":"shuruu-style: /num_info /aadhar_info /family_info /rc_num /truecaller_info /tg_info /vehicle_info /dl_info /fastag_info /imei_info /challan_info /ip_info /web_extract /phonebiz_info — sab ?key=KEY&query=VALUE (lifetime: owner key)",
+                            "personal_api":"shuruu-style: /num_info /aadhar_info /family_info /rc_num /truecaller_info /tg_info /vehicle_info /fastag_info /imei_info /ip_info /web_extract /phonebiz_info — sab ?key=KEY&query=VALUE (lifetime: owner key)",
                             "endpoints":{"/":"Landing HTML ?json=1 JSON","/dashboard":"Dashboard owner-only","/health":"Health","/tools":"Tool list","/api/docs":"Docs","/api?key=KEY&tool=TOOL&term=VALUE":"Main lookup","/api/keys/list?key=OWNER":"List keys","/api/keys/create?key=OWNER POST":"{label,key?,exp,daily,tools}","/api/keys/delete?key=OWNER&label=LABEL DELETE":"Delete","/api/usage?key=OWNER":"Usage","/keys?key=OWNER&ui=1":"Old HTML"},
                             "tools":U.TOOLS,
                             "examples":[f"https://{host}/api?key=OWNER&tool=num&term=9876543210",f"https://{host}/api?key=OWNER&tool=familyinfo&term=12digit",f"https://{host}/api?key=OWNER&tool=ip&term=8.8.8.8"],
@@ -875,34 +874,6 @@ class H(BaseHTTPRequestHandler):
                     if not re.match(r"^(\d{1,3}\.){3}\d{1,3}$",ip):
                         fin({"ok":False,"why":"validation","msg":"Need a valid IPv4 (8.8.8.8) or type: me"}); return
                     fin(U.lookup("ip",ip)); return
-                if tool=="challan2":
-                    v=re.sub(r"\s+","",str(term).upper())
-                    if not re.match(r"^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$",v):
-                        fin({"ok":False,"why":"validation","msg":"Need an RC like UP16FB2070."}); return
-                    _c,_b=U.http_get("https://challaninfoapibest.vercel.app/vehicletochallaninfo?vehicle="+urllib.parse.quote(v),45)
-                    _j=json.loads(_b) if (_c==200 and _b) else None
-                    if not isinstance(_j,dict):
-                        fin({"ok":False,"why":"upstream","msg":"Challan portal busy — 10-45s ka live scrape hai, dobara try karo."}); return
-                    _nums=_j.get("challan_numbers") or []
-                    _dets=[x for x in (_j.get("details") or []) if isinstance(x,dict) and x.get("accusedName")]
-                    _recent=[f"{x.get('accusedName','—')} · {x.get('accusedType','—')}"+(f" · #{x.get('challanId')}" if x.get('challanId') else "") for x in _dets[:6]]
-                    fin({"ok":True,"source":"challan-portal","data":{"vehicle":v,"total_challans":len(_nums),
-                        "challan_numbers":_nums[:25],"recent_details":_recent or None,
-                        "status":("challans on record" if _nums else "no challans found")}}); return
-                if tool=="dl":
-                    _m=re.match(r"^(.+?)[\s/, -]+(\d{2}-\d{2}-\d{4})$",str(term).strip())
-                    if not _m:
-                        fin({"ok":False,"why":"validation","msg":"Format: DLNUMBER DD-MM-YYYY (e.g. UP25 20210027727 01-01-2001)"}); return
-                    _dl=re.sub(r"\s+"," ",_m.group(1).strip().upper()); _dob=_m.group(2)
-                    _c,_b=U.http_get("https://driving-licence-info-api-abhigyan.vercel.app/dlinfoapi?dl="+urllib.parse.quote(_dl)+"&dob="+urllib.parse.quote(_dob),30)
-                    # v2.24.5 HONESTY: provider paused/down ho to 'notfound' jhooth mat bolo — upstream batao
-                    if _c!=200:
-                        fin({"ok":False,"why":"upstream","msg":"DL provider abhi paused/down hai — owner naya provider laga dega, thodi der baad try karo."}); return
-                    _j=json.loads(_b) if _b else None
-                    if not isinstance(_j,dict) or not _j.get("ok"):
-                        fin({"ok":False,"why":"notfound","msg":"DL not found for this number + DOB."}); return
-                    _j.pop("captcha_attempts",None)
-                    fin({"ok":True,"source":"sarathi-portal","data":_j}); return
                 if tool=="fastag":
                     v=re.sub(r"\s+","",str(term).upper())
                     if not re.match(r"^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$",v):

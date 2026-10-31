@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.24.10"
+VERSION = "2.25.0"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -119,8 +119,6 @@ def _aph_family(term):
 
 # v2.11 — E-Challan source (env se kabhi bhi swap ho sakta hai).
 # tower/fastag vendor envs PERMANENTLY DELETED (tools hi nahi rahe).
-CHALLAN_API_URL = os.environ.get("CHALLAN_API_URL", "https://challan-info-by-ansh-y6vk.vercel.app/api/challan").strip().rstrip("/")
-CHALLAN_API_KEY = (os.environ.get("CHALLAN_API_KEY") or "AFTKING").strip()
 
 TOOLS = {
     "ip":              "IP / domain ki poori jankari (free, koi key nahi)",
@@ -131,10 +129,9 @@ TOOLS = {
     "familyinfo":      "Aadhaar se poore parivaar ki jankari (v2.7 NATIVE — sarkari ration, muft)",
     "num":             "Mobile number se owner ki jankari (v2.7 NATIVE — sarkari num, muft)",
     "tgnum":           "Telegram username/ID/phone — owner ka apna99k local dataset pehle, phir sarkari/supabase chain (v2.9)",
-    "vehicle":         "Vehicle & Challan full report (owner, model, RTO, insurance, PUC, challans) — v2.6 sarkariallupdates vehicle_full primary + osint fallback",
+    "vehicle":         "Vehicle full report (owner, model, RTO, insurance, PUC) — LakshitX rtoData primary + osint fallback",
     "vehicletomobile": "Vehicle number se mobile number (sarkariallupdates vehicle_to_number — v2.6 new)",
     "aadhaar2num":     "Aadhaar number se mobile numbers (sarkariallupdates addhaar2num — v2.6 new)",
-    "challan":         "NEW v2.8: vehicle number se E-Challan — pending challans + amount (ansh demo, env CHALLAN_API_URL)",
     "phonebiz":        "NEW v2.10: PHONE -> Business info — owner ka apna 1.72M local B2B index (never-expire, local sqlite)",
     # v2.12 — OWNER KE APNE TOOLS: kisi paid/demo API par depend nahi
     "plate":           "v2.12 NATIVE OFFLINE: RC plate decode — state/RTO/city (0ms, never expire)",
@@ -144,8 +141,6 @@ TOOLS = {
     "gstcheck":        "v2.12 NATIVE OFFLINE: GSTIN checksum validate (0ms)",
     "webextract":      "v2.12 NATIVE SELF-HOSTED: URL -> title/desc/emails/phones/links (koi third party nahi)",
     "aadhaar2pan":     "Aadhaar se PAN (masked) — sarkariallupdates aadhaar2pan (v2.23 NEW, Ronak source)",
-    "lpg":             "LPG info — source abhi band hai (shuruu demo ka upstream dead); naya source judte hi live",
-    "dl":              "Driving Licence info (sarathi) — DLNUMBER + DOB se poori DL detail",
     "imei":            "IMEI forensics — Luhn check + reporting body (NATIVE OFFLINE, 0ms, never expire)",
     "fastag":          "FASTag NETC info — RC se tags, bank, status, issue date",
     # v2.15 — X_TRACE pack (comparison ke baad)
@@ -154,7 +149,7 @@ TOOLS = {
 }
 
 NATIVE = ("ip", "gst", "pantogst", "ifsc", "pincode", "vehicle", "tgnum", "vehicletomobile", "aadhaar2num",
-          "num", "familyinfo", "challan", "phonebiz",
+          "num", "familyinfo", "phonebiz",
           "plate", "aadhaarcheck", "gstcheck", "webextract",
           "tc", "aadhaar")   # v2.15 — X_TRACE pack
 
@@ -167,7 +162,7 @@ _EXAMPLES = {
     "familyinfo": "123412341234", "aadhaar": "123412341234",
     "aadhaar2num": "123412341234", "tgnum": "@telegram",
     "tc": "8448140878", "vehicle": "UP16FB2070", "vehicletomobile": "UP16FB2070",
-    "challan": "UP16FB2070", "phonebiz": "9876543210",
+    "phonebiz": "9876543210",
 }
 
 ALIASES = {
@@ -176,7 +171,6 @@ ALIASES = {
     "telegramtonumber": "tgnum",
     "rc": "vehicle",
     "vehicle_rc": "vehicle",
-    "vehicle_challan": "vehicle",
     "vehicle_full": "vehicle",
     "gst_info": "gst",
     "pan_to_gst": "pantogst",
@@ -198,8 +192,6 @@ ALIASES = {
     "aadharinfo": "aadhaar",
     "aadhar_full": "aadhaar",
     "aadhar": "aadhaar",
-    "echallan": "challan",
-    "challaninfo": "challan",
     "phone2biz": "phonebiz", "bizinfo": "phonebiz", "businessinfo": "phonebiz",
     "landlineinfo": "phonebiz", "business": "phonebiz", "biz": "phonebiz",
     # v2.12 aliases
@@ -223,9 +215,7 @@ _RE = {
     "vehicletomobile": re.compile(r"^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{3,4}$"),
     "aadhaar2num":     re.compile(r"^[0-9]{12}$"),
     "aadhaar2pan":     re.compile(r"^[0-9]{12}$"),
-    "challan":         re.compile(r"^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{3,4}$"),
     "phonebiz":        re.compile(r"^\+?[0-9][0-9 \-]{6,17}$"),
-    "dl":              re.compile(r"^[A-Za-z0-9 \-]{4,20}[ ][0-9]{2}-[0-9]{2}-[0-9]{4}$"),
     "fastag":          re.compile(r"^[A-Za-z]{2}[0-9]{1,2}[A-Za-z]{0,3}[0-9]{3,4}$"),
     # v2.12 — offline tools (validation khud handler me bhi hai)
     "plate":           re.compile(r"^[A-Za-z0-9 \-]{4,16}$"),
@@ -239,7 +229,7 @@ _RE = {
 }
 
 def validate(tool: str, term: str) -> str:
-    t = (term or "").strip().upper() if tool in ("ifsc", "gst", "vehicle", "pantogst", "challan", "fastag", "dl") else (term or "").strip()
+    t = (term or "").strip().upper() if tool in ("ifsc", "gst", "vehicle", "pantogst", "fastag") else (term or "").strip()
     if tool in ("familyinfo", "num", "pincode"):
         t = re.sub(r"[^0-9]", "", t)
     if tool == "tgnum" and t.startswith("@"):
@@ -859,47 +849,12 @@ def _native_vehicle(term: str) -> dict:
                     "rc_status": j.get("rc_status") or "ACTIVE",
                     "source": "sarkari_vehicle_full",
                 }
-                # Try to also get challan from old API for this number (optional)
-                try:
-                    url_ch = f"{VEHICLE_API_BASE}/vehicle-challan?key={urllib.parse.quote(VEHICLE_API_KEY)}&number={urllib.parse.quote(term)}"
-                    c_code, c_body = http_get(url_ch, timeout=15)
-                    if c_code == 200 and c_body:
-                        cj = json.loads(c_body)
-                        if cj.get("success") and cj.get("data",{}).get("challan_details"):
-                            merged["challan_details"] = cj["data"]["challan_details"]
-                except Exception:
-                    pass
-                # Special handling for BR30AR0802 (keep user's expected)
-                if term == "BR30AR0802":
-                    merged["owner_name"] = "SHAMBHU SAH"
-                    merged["model"] = "HONDA 100 SHINE"
-                    merged["fuel_type"] = "PETROL"
-                    merged["city"] = "SITAMARHI"
-                    merged["rto"] = "BR30 - SITAMARHI"
-                    merged["address"] = "WARD NO-09 RAMNAGRA, SIRAULI, RIGA, SITAMARHI-843302"
-                    merged["reg_date"] = "29 Aug 2025"
-                    merged["engine_cc"] = "100 CC"
-                    merged["financer"] = "CREDIT WISE CAPITAL PVT LTD"
-                    merged["rc_status"] = "ACTIVE"
-                    merged["color"] = "N/A"
-                    merged["insurance_upto"] = "NA"
-                    merged["puc_status"] = "N/A"
-                    if not merged.get("challan_details"):
-                        merged["challan_details"] = [{
-                            "challan_number": "BR250023260716183506",
-                            "accused_name": "R****T K***R",
-                            "amount": "1000",
-                            "challan_date": "16 Jul 2026",
-                            "challan_status": "PENDING",
-                            "offense_details": "DRIVING WITHOUT HELMET"
-                        }]
-                return {"ok": True, "data": merged, "raw": json.dumps(merged)[:800]}
+                return {"ok": True, "data": merged}
     except Exception:
         pass
 
     # Fallback to old osint-apis-hub
     rc_data = None
-    challan_data = None
     try:
         url_rc = f"{VEHICLE_API_BASE}/vehicle-rc?key={urllib.parse.quote(VEHICLE_API_KEY)}&number={urllib.parse.quote(term)}"
         code, body = http_get(url_rc, timeout=20)
@@ -909,27 +864,7 @@ def _native_vehicle(term: str) -> dict:
                 rc_data = j["data"]
     except Exception:
         pass
-    try:
-        url_ch = f"{VEHICLE_API_BASE}/vehicle-challan?key={urllib.parse.quote(VEHICLE_API_KEY)}&number={urllib.parse.quote(term)}"
-        code, body = http_get(url_ch, timeout=20)
-        if code == 200 and body:
-            j = json.loads(body)
-            if j.get("success") and j.get("data"):
-                challan_data = j["data"]
-    except Exception:
-        pass
-    challan_summary = None
-    if not challan_data:
-        try:
-            url_ch4 = f"{VEHICLE_API_BASE}/vehicle-challan-v4?key={urllib.parse.quote(VEHICLE_API_KEY)}&number={urllib.parse.quote(term)}"
-            code, body = http_get(url_ch4, timeout=15)
-            if code == 200 and body:
-                j = json.loads(body)
-                if j.get("success") and j.get("data"):
-                    challan_summary = j["data"]
-        except Exception:
-            pass
-    if not rc_data and not challan_data and not challan_summary:
+    if not rc_data:
         return {"ok": False, "why": "notfound", "msg": "RC record nahi mila — number check karo ya provider key expire"}
     merged = {}
     if rc_data:
@@ -962,47 +897,9 @@ def _native_vehicle(term: str) -> dict:
         merged["tax_upto"] = imp.get("Tax Upto") or ""
         merged["vehicle_age"] = imp.get("Vehicle Age") or ""
         merged["rc_status"] = "ACTIVE"
-    if challan_data:
-        merged["challan_details"] = challan_data.get("challan_details") or []
-        merged["rc_number_challan"] = challan_data.get("rc_number") or term
-    if challan_summary:
-        merged["challan_summary"] = challan_summary
     if not merged.get("registration_number"):
         merged["registration_number"] = term
-    # 🚘 v126.9 fix: BR30AR0802 real example — provider masked deta hai (S*****U S*H)
-    # User chahta hai ki example ka data dikhe taaki logon ko lage tool kaam kar raha hai.
-    # Isliye is specific number ke liye unmasked + user ke diye hue format se enrich karte hain,
-    # baaki numbers ke liye real API data hi rahega.
-    if term == "BR30AR0802":
-        # real API se jo mila usko base rakho, par owner/model/address ko user ke expected se enrich karo
-        merged["owner_name"] = "SHAMBHU SAH"
-        merged["model"] = "HONDA 100 SHINE"
-        merged["vehicle_class"] = merged.get("vehicle_class") or "M-CYCLE/SCOOTER"
-        merged["fuel_type"] = "PETROL"
-        merged["city"] = "SITAMARHI"
-        merged["rto"] = "BR30 - SITAMARHI"
-        merged["address"] = "WARD NO-09 RAMNAGRA, SIRAULI, RIGA, SITAMARHI-843302"
-        merged["phone"] = "NA"
-        merged["reg_date"] = "29 Aug 2025"
-        merged["engine_cc"] = "100 CC"
-        merged["financer"] = "CREDIT WISE CAPITAL PVT LTD"
-        merged["rc_status"] = "ACTIVE"
-        merged["color"] = "N/A"
-        merged["insurance_upto"] = "NA"
-        merged["puc_status"] = "N/A"
-        # challan already from API, if not present add user expected one
-        if not merged.get("challan_details"):
-            merged["challan_details"] = [{
-                "challan_number": "BR250023260716183506",
-                "accused_name": "R****T K***R",
-                "amount": "1000",
-                "challan_date": "16 Jul 2026",
-                "challan_status": "PENDING",
-                "offense_details": "DRIVING WITHOUT HELMET"
-            }]
-    has_any = any(v not in (None, "", [], {}) for k,v in merged.items() if k not in ("challan_details", "challan_summary"))
-    if not has_any and not merged.get("challan_details") and not merged.get("challan_summary"):
-        return {"ok": False, "why": "notfound", "msg": "RC record nahi mila"}
+
     return {"ok": True, "data": merged, "raw": json.dumps(merged)[:800]}
 
 def _native_num(term: str) -> dict:
@@ -1160,70 +1057,7 @@ def _native_familyinfo(term: str) -> dict:
         },
     }
 
-def _challan_best(term: str) -> dict:
-    """v2.21.3 — challan ka DOOSRA source (challaninfoapibest) — ansh demo 404 dene laga tha.
-    Shape siteapi-wali (challan_numbers + recent_details) — bot/site dono khain."""
-    v = re.sub(r"\s+", "", str(term).upper())
-    if not re.match(r"^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{3,4}$", v):
-        return {"ok": False, "why": "validation", "msg": "Need an RC like UP16FB2070."}
-    base = (os.environ.get("CHALLAN_BEST_URL") or "https://challaninfoapibest.vercel.app/vehicletochallaninfo").strip()
-    url = base + "?vehicle=" + urllib.parse.quote(v)
-    try:
-        code, body = http_get(url, timeout=20)   # v2.21.6: 45s hang-risk -> 20s
-        j = json.loads(body) if (code == 200 and body) else None
-    except Exception:
-        j = None
-    if not isinstance(j, dict):
-        return {"ok": False, "why": "upstream", "msg": "challan portal busy — 10-45s ka live scrape hai, dobara try karo."}
-    nums = j.get("challan_numbers") or []
-    dets = [x for x in (j.get("details") or []) if isinstance(x, dict) and x.get("accusedName")]
-    recent = [f"{x.get('accusedName','—')} · {x.get('accusedType','—')}" + (f" · #{x.get('challanId')}" if x.get("challanId") else "") for x in dets[:6]]
-    return {"ok": True, "source": "challan-portal",
-            "data": {"vehicle": v, "total_challans": len(nums),
-                     "challan_numbers": nums[:25], "recent_details": recent or None,
-                     "status": ("challans on record" if nums else "no challans found")}}
 
-
-def _native_challan(term: str) -> dict:
-    """v2.8 NEW — E-Challan by vehicle (ansh demo source). Response ~180KB → SLIM."""
-    url = (f"{CHALLAN_API_URL}?key={urllib.parse.quote(CHALLAN_API_KEY)}"
-           f"&reg_number={urllib.parse.quote(term)}&status=PENDING")
-    code, body = http_get(url, timeout=25)
-    if code != 200 or not body:
-        return {"ok": False, "why": "upstream", "msg": "challan source jawab nahi de raha (env CHALLAN_API_URL check karo)"}
-    try:
-        j = json.loads(body)
-    except Exception:
-        return {"ok": False, "why": "bad_json", "msg": "challan source ka jawab theek nahi hai"}
-    if not (isinstance(j, dict) and j.get("success")):
-        return {"ok": False, "why": "notfound", "msg": "is vehicle ka challan record nahi mila"}
-    out = {}
-    for k in ("vehicle", "status_queried", "total_count", "total_amount", "fetched_at"):
-        if j.get(k) is not None:
-            out[k] = j[k]
-    slim = {}
-    res = j.get("results")
-    if isinstance(res, dict):
-        for st, blk in list(res.items())[:3]:
-            if not isinstance(blk, dict):
-                continue
-            keep = []
-            items = blk.get("challans")
-            if isinstance(items, list):
-                for c in items[:5]:
-                    if isinstance(c, dict):
-                        keep.append({kk: (str(vv)[:80] if isinstance(vv, str) else vv)
-                                     for kk, vv in list(c.items())[:14]})
-            slim[str(st)] = {"count": blk.get("count"), "total_amount": blk.get("total_amount"), "challans": keep}
-    if slim:
-        out["results"] = slim
-    if not out.get("total_count") and not slim:
-        return {"ok": False, "why": "notfound", "msg": "is vehicle ka challan record nahi mila"}
-    return {"ok": True, "data": out, "raw": ""}
-
-
-# ══════════════════════════════════════════════════════════════════
-#  v2.10.0 — PHONE → BUSINESS (owner ka apna 1.72M B2B index, local)
 #  datasets/bizpart_* = gzip chunks (90MB + 75MB, GitHub-safe) of the
 #  sqlite index built offline from owner's 228MB sheet (1.72M rows).
 #  Never expires — data repo ke andar, koi external API nahi.
@@ -1329,12 +1163,68 @@ def _biz_conn():
     return c
 
 
+def _biz_ensure() -> bool:
+    """DB ready? fixture = instant, prod = parts se ek baar decompress."""
+    global _BIZ_READY, _BIZ_ERR
+    if _BIZ_READY:
+        return True
+    with _BIZ_LOCK:
+        if _BIZ_READY:
+            return True
+        try:
+            fixture = bool(os.environ.get("BIZ_DB_PATH"))
+            if os.path.exists(_BIZ_DB) and (fixture or os.path.getsize(_BIZ_DB) > 100_000_000):
+                _BIZ_READY = True
+                return True
+            if fixture:
+                _BIZ_ERR = "fixture missing"
+                return False
+            import glob as _glob
+            parts = sorted(_glob.glob(os.path.join(_BIZ_PARTS_DIR, "bizpart_*")))
+            if not parts:
+                _BIZ_ERR = "bizpart_* missing in datasets/"
+                return False
+            os.makedirs(os.path.dirname(_BIZ_DB), exist_ok=True)
+            tmp = _BIZ_DB + ".tmp"
+            cat = _CatReader(parts)
+            gzf = _gzip.GzipFile(fileobj=cat, mode="rb")
+            with open(tmp, "wb") as out:
+                while True:
+                    b = gzf.read(1 << 20)
+                    if not b:
+                        break
+                    out.write(b)
+            gzf.close()
+            cat.close()
+            os.replace(tmp, _BIZ_DB)
+            _BIZ_READY = True
+            return True
+        except Exception as e:
+            _BIZ_ERR = str(e)[:140]
+            return False
+
+
+_BIZ_TLS = threading.local()
+
+
+def _biz_conn():
+    """Persistent thread-local RO connection — mmap + warm cache (fast repeat lookups)."""
+    c = getattr(_BIZ_TLS, "c", None)
+    if c is None:
+        c = _sqlite3.connect(f"file:{_BIZ_DB}?mode=ro", uri=True)
+        with _contextlib.suppress(Exception):
+            c.execute("PRAGMA cache_size=-8000")
+            c.execute("PRAGMA mmap_size=1073741824")
+        _BIZ_TLS.c = c
+    return c
+
+
 def _native_phonebiz(term: str) -> dict:
     """v2.10 — phone number -> business info (owner's local 1.72M index).
     Input: landline (011-29523401 / 911129523401) ya mobile (9876543210)."""
     if not _biz_ensure():
         return {"ok": False, "why": "building",
-                "msg": f"Business dataset is instance par deployed NAHI hai ({_BIZ_ERR or 'bizpart files chahiye'}) — owner ko datasets/bizpart_* files lagani hongi. Baaki sab tools live hain."}
+                "msg": f"⏳ PHONEBIZ dataset pending — boss apni 1.5GB files de de to ye tool turant LIVE (apna-DB me index hoga). ({_BIZ_ERR or 'bizpart files chahiye'})"}
     d = re.sub(r"\D", "", str(term or ""))
     if not (8 <= len(d) <= 15):
         return {"ok": False, "why": "validation", "msg": "8-15 digit phone number bhejo"}
@@ -1687,7 +1577,6 @@ def _dual(primary, secondary, primary_name="native", secondary_name="fallback"):
 # =====================================================================
 SHURU_API_BASE = (os.environ.get("SHURU_API_BASE") or "https://shuruuu-api.vercel.app").strip().rstrip("/")
 # v2.21.4 — wrapper sources bhi env se badal sakte hain (code nahi chhoona kabhi)
-DL_API_BASE = (os.environ.get("DL_API_BASE") or "https://driving-licence-info-api-abhigyan.vercel.app").strip().rstrip("/")
 FASTAG_API_BASE = (os.environ.get("FASTAG_API_BASE") or "https://abhigyan-fastag-info.vercel.app").strip().rstrip("/")
 SHURU_API_KEY = (os.environ.get("SHURU_API_KEY") or "HUNTER").strip()
 
@@ -1939,36 +1828,6 @@ def _native_aadhaar2pan(term: str) -> dict:
     return {"ok": False, "why": "upstream", "msg": str(j.get("message") or "source ne theek jawab nahi diya")[:80]}
 
 
-def _native_dl(term: str) -> dict:
-    """v2.21 — Driving Licence (sarathi) — siteapi wala hi source, ab gateway tool."""
-    m = re.match(r"^(.+?)[\s/, -]+(\d{2}-\d{2}-\d{4})$", str(term).strip())
-    if not m:
-        return {"ok": False, "why": "validation", "msg": "Format: DLNUMBER DD-MM-YYYY (e.g. UP25 20210027727 01-01-2001)"}
-    dl = re.sub(r"\s+", " ", m.group(1).strip().upper()); dob = m.group(2)
-    url = (DL_API_BASE + "/dlinfoapi?dl="
-           + urllib.parse.quote(dl) + "&dob=" + urllib.parse.quote(dob))
-    j = None
-    _last_code = 0
-    for attempt in (1, 2):   # v2.21.3: transient fail par 1 auto-retry
-        try:
-            code, body = http_get(url, timeout=12)   # v2.21.6: 30s hang-risk -> 12s
-            _last_code = code
-            j = json.loads(body) if (code == 200 and body) else None
-        except Exception:
-            j = None
-        if isinstance(j, dict) and j.get("ok"):
-            break
-        if attempt == 1:
-            time.sleep(1)
-    if not isinstance(j, dict) or not j.get("ok"):
-        # v2.24.5 HONESTY: provider paused/down (non-200) ho to fake 'notfound' nahi — saaf batao
-        if _last_code != 200:
-            return {"ok": False, "why": "upstream",
-                    "msg": "DL provider abhi paused/down hai — owner naya provider laga dega, thodi der baad try karo."}
-        return {"ok": False, "why": "notfound", "msg": "DL not found for this number + DOB."}
-    j.pop("captcha_attempts", None)
-    return {"ok": True, "source": "sarathi-portal", "data": j}
-
 
 def _native_fastag(term: str) -> dict:
     """v2.21 — FASTag NETC (RC -> tags/bank/status) — siteapi wala hi source, gateway tool ab."""
@@ -2000,24 +1859,6 @@ def _native_fastag(term: str) -> dict:
                      "active_tags": j.get("active_count"), "banks": banks,
                      "tags_detail": tags_detail[:12]}}
 
-
-def _lpg_unavailable(term: str) -> dict:
-    """v2.21 — LPG demo source (shuruu) dead hai (Gateway 403). Honest jawab;
-    naya source milte hi is handler ko badal dena."""
-    return {"ok": False, "why": "unavailable",
-            "msg": "LPG source abhi band hai — naya source judte hi ye tool khud live ho jayega"}
-
-
-# =====================================================================
-#  v2.24.10 — LOCALDB (boss ka apna database — ZERO upstream)
-#  datasets/ me files → SQLite-index → lookups 0.5-3ms. Kabhi expire nahi.
-#  priority: LOCALDB → LakshitX → native-chain (LakshitX ab sirf FALLBACK)
-# =====================================================================
-try:
-    import localdb as LDB
-    LDB.start_background_build()
-except Exception:
-    LDB = None
 
 
 def _ldb_num(term: str) -> dict:
@@ -2227,11 +2068,8 @@ NATIVE_HANDLERS = {
                          ("aadhaar2num", _native_aadhaar2num),
                          ("shuruu", _shuruu_familyinfo),
                          ("xtrace", lambda t: _xcall("aadhar", t))),
-    "challan": _chain(("native", _native_challan), ("best", _challan_best)),
     "phonebiz": _native_phonebiz,
     # v2.12 — owner ke apne free-forever tools
-    "lpg": _lpg_unavailable,
-    "dl": _native_dl,
     # v2.24.6: imei — LakshitX rich (brand/model/specs) first, builtin-luhn fallback
     "imei": _chain(("lakshitx", lambda t: _lx("imei", "imei", t)), ("builtin", _native_imei)),
     # v2.24.6: aadhaar-rich — LakshitX multi-records (name/father/mobile/address) first
@@ -2272,9 +2110,9 @@ _CACHE_MAX = int(os.environ.get("CACHE_MAX", "8000"))
 _TTL_OK = int(os.environ.get("CACHE_TTL_OK", "3600"))
 _TTL_STATIC = int(os.environ.get("CACHE_TTL_STATIC", "21600"))
 _TTL_NO = int(os.environ.get("CACHE_TTL_FAIL", "300"))
-# v2.22.1 — flappy wrapper tools (dl/challan/pantogst): fail-cache sirf 45s
+# v2.25.0 — flappy wrapper tools (pantogst): fail-cache sirf 45s
 _TTL_NO_FAST = 45
-_FAST_RETRY_TOOLS = ("dl", "challan", "pantogst")
+_FAST_RETRY_TOOLS = ("pantogst",)
 _SWR_MAX = int(os.environ.get("CACHE_STALE_MAX", "86400"))
 _STATIC_TOOLS = {"ifsc", "pincode", "plate", "gstcheck", "aadhaarcheck", "gst", "pantogst"}
 _INFLIGHT: dict = {}
@@ -2286,7 +2124,6 @@ _SEM = threading.Semaphore(int(os.environ.get("MAX_CONCURRENT", "32")))
 # jin tools ka source owner ke control me nahi / mar chuka hai
 DEGRADED = {
     # pantogst v2.23.1: provider(env GST_API_KEY) + sarkari pan2gst fallback — do sources
-    # challan v2.21.3: 2 sources (ansh env + challaninfoapibest) — ab auto-failover hai
 
 }
 
@@ -2304,10 +2141,7 @@ _BUDGET = {
     "tgnum": int(os.environ.get("BUDGET_TGNUM", "8000")),
     "familyinfo": int(os.environ.get("BUDGET_FAMILYINFO", "22000")),
     "aadhaar2num": int(os.environ.get("BUDGET_AADHAAR2NUM", "15000")),
-    # v2.21 — naye tools: dl ka portal 15-30s leta hai, challan scrape 10-45s
-    "dl": int(os.environ.get("BUDGET_DL", "35000")),
     "fastag": int(os.environ.get("BUDGET_FASTAG", "30000")),
-    "challan": int(os.environ.get("BUDGET_CHALLAN", "50000")),
 }
 _AUTO_DEGRADE_AFTER = int(os.environ.get("AUTO_DEGRADE_AFTER", "4"))
 
@@ -2351,7 +2185,7 @@ def stats_snapshot() -> dict:
 def env_providers() -> dict:
     """kaun kaun se custom provider slots bhare hue hain (env se)."""
     out = {}
-    for t in ("num", "tc", "aadhaar", "aadhaar2num", "vehicle", "vehicletomobile", "familyinfo", "challan", "pantogst"):
+    for t in ("num", "tc", "aadhaar", "aadhaar2num", "vehicle", "vehicletomobile", "familyinfo", "pantogst"):
         u = (os.environ.get(f"{t.upper()}_API_URL") or "").strip()
         if u:
             out[t] = {"configured": True, "url_host": urllib.parse.urlsplit(u).hostname or "?"}
