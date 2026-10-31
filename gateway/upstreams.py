@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.26.1"
+VERSION = "2.26.2"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -891,6 +891,74 @@ def _native_vehicletomobile(term: str) -> dict:
             "source_note": "mirror",
         }}
     return {"ok": False, "why": "notfound", "msg": "Vehicle se mobile nahi mila"}
+
+
+def _vahanx_rc(term: str) -> dict:
+    """v2.26.2 - vahanx.in native-scraper (no-key): same-opener token-flow (test-verified 2x).
+    rc-search page se VX_ST.rc token, phir /rc-search/{RC}?t=TOK same-jar+UA se -> 200 hrc-details-card."""
+    rc = re.sub(r"[^A-Z0-9]", "", term.strip().upper())
+    if not (4 <= len(rc) <= 11):
+        return {"ok": False, "why": "validation", "msg": "RC-format galat"}
+    try:
+        import http.cookiejar as _cj
+        UA = "Mozilla/5.0 (Linux; Android 10) Chrome/130.0 Mobile Safari/537.36"
+        jar = _cj.CookieJar()
+        class _NR(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, *a):
+                return None
+        op = urllib.request.build_opener(_NR, urllib.request.HTTPCookieProcessor(jar))
+        op.addheaders = [("User-Agent", UA)]
+        html = op.open("https://vahanx.in/rc-search", timeout=20).read().decode("utf-8", "ignore")
+        mt = re.search(r'rc:\s*"([^"]+)"', html)
+        if not mt:
+            return {"ok": False, "why": "upstream", "msg": "vahanx: token nahi mila"}
+        r = op.open(f"https://vahanx.in/rc-search/{rc}?t={urllib.parse.quote(mt.group(1))}", timeout=25)
+        body = r.read().decode("utf-8", "ignore")
+        if r.status != 200 or "hrc-details-card" not in body:
+            return {"ok": False, "why": "notfound", "msg": "vahanx: record nahi mila"}
+        seg = body[body.find("hrc-details-card"):body.find("<footer")]
+        toks = [t.strip() for t in (x.strip() for x in re.findall(r">([^<>]+)<", seg)) if t.strip()]
+        d = {}
+        LABELS = ["Owner Name", "Owner Serial No", "Registration Number", "Registered RTO",
+                  "Model Name", "Maker Model", "Vehicle Class", "Fuel Type", "Chassis Number",
+                  "Engine Number", "Insurance Expiry", "Insurance No", "Insurance Company",
+                  "Registration Date", "Vehicle Age", "Fitness Upto", "Tax Upto", "PUC No", "PUC Upto",
+                  "City Name", "Phone", "Website", "Address", "Fuel Norms", "Seating Capacity", "Color"]
+        for i, t in enumerate(toks):
+            if t in LABELS and i + 1 < len(toks):
+                v = toks[i + 1]
+                if v in LABELS:
+                    continue
+                d[t] = v
+        if not d.get("Owner Name"):
+            return {"ok": False, "why": "notfound", "msg": "vahanx: owner-field nahi mila"}
+        return {"ok": True, "source": "vahanx-native", "data": {
+            "registration_number": d.get("Registration Number") or rc,
+            "owner_name": d.get("Owner Name") or "",
+            "owner_serial": d.get("Owner Serial No") or "",
+            "rto": d.get("Registered RTO") or "",
+            "maker": d.get("Model Name") or "",
+            "model": d.get("Maker Model") or "",
+            "vehicle_class": d.get("Vehicle Class") or "",
+            "fuel_type": d.get("Fuel Type") or "",
+            "chassis_number": d.get("Chassis Number") or "",
+            "engine_number": d.get("Engine Number") or "",
+            "insurance_company": d.get("Insurance Company") or "",
+            "insurance_upto": d.get("Insurance Expiry") or "",
+            "insurance_policy_number": d.get("Insurance No") or "",
+            "reg_date": d.get("Registration Date") or "",
+            "vehicle_age": (d.get("Vehicle Age") or "").replace("&amp;", "&"),
+            "fitness_upto": d.get("Fitness Upto") or "",
+            "tax_upto": d.get("Tax Upto") or "",
+            "pucc_number": d.get("PUC No") or "",
+            "pucc_valid_upto": d.get("PUC Upto") or "",
+            "city": d.get("City Name") or "",
+            "rto_phone": d.get("Phone") or "",
+            "rto_website": d.get("Website") or "",
+            "rto_address": d.get("Address") or "",
+            "source_note": "vahanx.in public page (chassis/engine/puc/policy masked-by-source)"}}
+    except Exception as e:
+        return {"ok": False, "why": "error", "msg": f"vahanx: {str(e)[:90]}"}
 
 
 def _native_vehicle(term: str) -> dict:
@@ -2148,6 +2216,7 @@ NATIVE_HANDLERS = {
                       ("lakshitx", lambda t: _lx("vehicle", "vehicle", t)),
                       ("provider", _env_provider("vehicle")),
                       ("native", _native_vehicle),
+                      ("vahanx", _vahanx_rc),
                       ("xtrace", lambda t: _xcall("vehicle_full", t))),
     "tgnum": _chain(("apna-db", _ldb_tg),
                     ("native", _native_tgnum)),
