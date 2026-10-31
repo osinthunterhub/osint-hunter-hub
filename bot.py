@@ -135,7 +135,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
                               + " | backups: " + str(_vs.get("count", 0))
                               + " | last-ok: " + str(_vs.get("age_s", "-")) + "s"
                               + " | db_users: " + str(_vs.get("db_users", 0))
-                              + " | ups: " + str(globals().get("_UPSTATS", {}).get("recv", 0)) + "/" + str(globals().get("_UPSTATS", {}).get("err", 0))
+                              + " | ups: " + str(globals().get("_UPSTATS", {}).get("recv", 0)) + "/" + str(globals().get("_UPSTATS", {}).get("err", 0)) + " | loop: " + (str(int(time.time() - globals().get("LOOP_TS", 0))) + "s" if globals().get("LOOP_TS") else "DEAD")
                               + (("| err: " + str(_vs.get("last_err"))[:140]) if _vs.get("last_err") else "")
                               + "</p>")
                     _html = ("<html><body><h1>🚀 OSINT Hunter Hub — LIVE ⚡</h1>"
@@ -2988,6 +2988,8 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def main_async():
     global app, loop
     loop = asyncio.get_running_loop()
+    global LOOP_TS
+    LOOP_TS = time.time()
     print("Building 8 TOOLS FAST STABLE app...")
     # v2.5.5 (bot-1 jaisa): Render env FREE_CREDITS/TG_CREDITS badle -> sab reset
     try:
@@ -3140,7 +3142,9 @@ async def main_async():
         traceback.print_exc()
 
     print("10 TOOLS + PAYMENTS + CREDITS + ADMIN FAST STABLE WEBHOOK READY!")
+    global LOOP_TS
     while True:
+        LOOP_TS = time.time()
         await asyncio.sleep(60)
         # (keepalive self_ping_loop me hai — bot khud ko + gateway ko har 5 min ping karta hai)
         print(f"10 tools + payments alive - Users: {len(all_user_ids())} - Premium: {len(premium_users())} - Pending: {pending_payments_count()}")
