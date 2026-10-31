@@ -405,6 +405,8 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0a1226;border:1px sol
 <option value="ip">ip — sirf IP INFO</option>
 <option value="ifsc">ifsc — sirf IFSC INFO</option>
 <option value="pincode">pincode — sirf PINCODE INFO</option>
+<option value="weather">weather — city ka mausam + 3-day forecast</option>
+<option value="dns">dns — domain ke A/MX/TXT/NS records</option>
 <option value="vehicle">vehicle — sirf RC/VEHICLE</option>
 <option value="tgnum">tgnum — sirf TELEGRAM NUMBER</option>
 <option value="phonebiz">phonebiz — Phone → Business Info</option>
@@ -516,13 +518,13 @@ function genKey(){
   document.getElementById('f_key').value=s;
 }
 function getSampleTerm(tool){
-  const samples={num:'9876543210',familyinfo:'401635555849',aadhar:'401635555849',gst:'19BOKPS7056D1ZI',ip:'8.8.8.8',ifsc:'SBIN0000001',pincode:'110001',paknum:'03001234567',vehicle:'BR01AB1234',tgnum:'@username',pakvehicle:'ABC123',tower:'9876543210',fastag:'RJ14CV0002',phonebiz:'9985814792'};
+  const samples={num:'9876543210',familyinfo:'401635555849',aadhar:'401635555849',gst:'19BOKPS7056D1ZI',ip:'8.8.8.8',ifsc:'SBIN0000001',pincode:'110001',paknum:'03001234567',vehicle:'BR01AB1234',tgnum:'@username',pakvehicle:'ABC123',tower:'9876543210',fastag:'RJ14CV0002',phonebiz:'9985814792',weather:'Hajipur',dns:'google.com'};
   return samples[tool]||'VALUE';
 }
 function buildReadyUrls(key, toolsRaw){
   const host=HOST;
   let tools=[];
-  if(!toolsRaw || toolsRaw==='*' || toolsRaw==='all'){tools=['num','familyinfo','aadhar','gst','ip','ifsc','pincode','paknum','vehicle','tgnum','pakvehicle','tower','fastag','phonebiz'];}
+  if(!toolsRaw || toolsRaw==='*' || toolsRaw==='all'){tools=['num','familyinfo','aadhar','gst','ip','ifsc','pincode','paknum','vehicle','tgnum','pakvehicle','tower','fastag','phonebiz','weather','dns'];}
   else{tools=toolsRaw.split(/[+|,;]+/).map(t=>t.trim()).filter(Boolean);}
   const box=document.getElementById('readyBox');
   const cont=document.getElementById('readyUrls');
@@ -658,7 +660,7 @@ class H(BaseHTTPRequestHandler):
             "/family_info": "familyinfo", "/rc_num": "vehicletomobile",
             "/truecaller_info": "tc", "/tg_info": "tgnum", "/vehicle_info": "vehicle",
             "/fastag_info": "fastag", "/imei_info": "imei",
-           "/ip_info": "ip", "/web_extract": "webextract",
+           "/ip_info": "ip", "/web_extract": "webextract", "/weather_info": "weather", "/mausam_info": "weather", "/dns_info": "dns",
             "/phonebiz_info": "phonebiz",
             "/upi_info": "upi",  # v2.24.6 — LakshitX upi-verify
             "/insta_info": "insta", "/instagram_info": "insta",  # v2.24.7 — native
@@ -704,7 +706,7 @@ class H(BaseHTTPRequestHandler):
         if p in ("/api/docs","/docs"):
             self._send(200,{"service":"HIMANSHU API","owner":"HIMANSHU","telegram":"@ANONYMOUS_XH","version":U.VERSION,"base":f"https://{host}",
                             "auth":"GATEWAY_KEY owner unlimited, API_KEYS demo/bikau expiry+daily:tools",
-                            "personal_api":"shuruu-style: /num_info /aadhar_info /family_info /rc_num /truecaller_info /tg_info /vehicle_info /fastag_info /imei_info /ip_info /web_extract /phonebiz_info — sab ?key=KEY&query=VALUE (lifetime: owner key)",
+                            "personal_api":"shuruu-style: /num_info /aadhar_info /family_info /rc_num /truecaller_info /tg_info /vehicle_info /fastag_info /imei_info /ip_info /web_extract /phonebiz_info /weather_info /dns_info — sab ?key=KEY&query=VALUE (lifetime: owner key)",
                             "endpoints":{"/":"Landing HTML ?json=1 JSON","/dashboard":"Dashboard owner-only","/health":"Health","/tools":"Tool list","/api/docs":"Docs","/api?key=KEY&tool=TOOL&term=VALUE":"Main lookup","/api/keys/list?key=OWNER":"List keys","/api/keys/create?key=OWNER POST":"{label,key?,exp,daily,tools}","/api/keys/delete?key=OWNER&label=LABEL DELETE":"Delete","/api/usage?key=OWNER":"Usage","/keys?key=OWNER&ui=1":"Old HTML"},
                             "tools":U.TOOLS,
                             "examples":[f"https://{host}/api?key=OWNER&tool=num&term=9876543210",f"https://{host}/api?key=OWNER&tool=familyinfo&term=12digit",f"https://{host}/api?key=OWNER&tool=ip&term=8.8.8.8"],

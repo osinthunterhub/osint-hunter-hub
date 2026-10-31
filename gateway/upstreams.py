@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.25.1"
+VERSION = "2.26.0"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -130,6 +130,8 @@ TOOLS = {
     "num":             "Mobile number se owner ki jankari (v2.7 NATIVE — sarkari num, muft)",
     "tgnum":           "Telegram username/ID/phone — owner ka apna99k local dataset pehle, phir sarkari/supabase chain (v2.9)",
     "vehicle":         "Vehicle full report (owner, model, RTO, insurance, PUC) — LakshitX rtoData primary + osint fallback",
+    "weather":         "Mausam report (koi bhi city/lat,lon) — current + 3-day forecast (Open-Meteo, no-key)",
+    "dns":             "Domain DNS records (A/AAAA/MX/TXT/NS) — dns.google DoH, no-key",
     "vehicletomobile": "Vehicle number se mobile number (sarkariallupdates vehicle_to_number — v2.6 new)",
     "aadhaar2num":     "Aadhaar number se mobile numbers (sarkariallupdates addhaar2num — v2.6 new)",
     "phonebiz":        "NEW v2.10: PHONE -> Business info — owner ka apna 1.72M local B2B index (never-expire, local sqlite)",
@@ -166,6 +168,11 @@ _EXAMPLES = {
 }
 
 ALIASES = {
+    "weather_info": "weather",
+    "mausam": "weather",
+    "mausam_info": "weather",
+    "dns_lookup": "dns",
+    "resolve": "dns",
     "lynxosint__vehicle": "vehicle",
     "lynxosint__ip": "ip",
     "telegramtonumber": "tgnum",
@@ -225,6 +232,8 @@ _RE = {
     "gstcheck":        re.compile(r"^[A-Za-z0-9]{15}$"),
     "webextract":      re.compile(r"^(https?://)?[A-Za-z0-9.\-]+\.[A-Za-z]{2,}.*$"),
     "tc":              re.compile(r"^[6-9][0-9]{9}$"),
+    "weather":         re.compile(r"^(?:(?:weather|mausam)[\s:]+)?[A-Za-z][A-Za-z .,'\-]{1,39}$|^[-0-9.,]+,[-0-9.,]+$"),
+    "dns":             re.compile(r"^(?:(?:dns|resolve)[\s:]+)?[A-Za-z0-9][A-Za-z0-9.\-]{2,60}$"),
     "aadhaar":         re.compile(r"^[0-9]{12}$"),
 }
 
@@ -388,6 +397,71 @@ def _native_ifsc(term: str) -> dict:
         except Exception:
             pass
     return {"ok": False, "why": "notfound", "msg": "IFSC nahi mila"}
+
+
+def _native_weather(term: str) -> dict:
+    """Open-Meteo (no-key, kabhi-expire-nahi): city/lat,lon → current + 3-day forecast."""
+    t = term.strip()
+    for pre in ("weather", "mausam"):
+        if t.lower().startswith(pre):
+            t = t[len(pre):].strip(" :,-")
+    try:
+        if "," in t and all(p.replace(".", "").isdigit() and p.strip() for p in t.split(",", 1)):
+            la, lo = t.split(",", 1)
+            lat, lon, place = float(la), float(lo), f"{la},{lo}"
+        else:
+            c_code, c_body = http_get(f"https://geocoding-api.open-meteo.com/v1/search?name={urllib.parse.quote(t)}&count=1&language=en&format=json", timeout=12, headers={"Accept-Encoding": "identity"})
+            g = (json.loads(c_body).get("results") or [{}])[0] if c_code == 200 and c_body else {}
+            if not g:
+                return {"ok": False, "why": "notfound", "msg": f"City '{t}' nahi mili — spelling check karo"}
+            lat, lon = float(g["latitude"]), float(g["longitude"])
+            place = ", ".join(x for x in (g.get("name"), g.get("admin1"), g.get("country")) if x)
+        w_code, w_body = http_get(
+            f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
+            "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m"
+            "&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=3", timeout=15, headers={"Accept-Encoding": "identity"})
+        if w_code != 200 or not w_body:
+            return {"ok": False, "why": "upstream", "msg": f"Open-Meteo HTTP {w_code}"}
+        j = json.loads(w_body)
+        WC = {0:"Clear ☀️",1:"Mostly clear 🌤️",2:"Partly cloudy ⛅",3:"Overcast ☁️",45:"Fog 🌫️",48:"Fog 🌫️",
+              51:"Drizzle 🌦️",53:"Drizzle 🌦️",55:"Drizzle 🌦️",61:"Light rain 🌧️",63:"Rain 🌧️",65:"Heavy rain 🌧️",
+              71:"Snow ❄️",73:"Snow ❄️",75:"Snow ❄️",80:"Showers 🌦️",81:"Showers 🌦️",82:"Showers ⛈️",
+              95:"Thunderstorm ⛈️",96:"Thunderstorm ⛈️",99:"Thunderstorm ⛈️"}
+        cu, dl = j.get("current", {}), j.get("daily", {})
+        days = [{"date": d, "max": dl["temperature_2m_max"][i], "min": dl["temperature_2m_min"][i],
+                 "sky": WC.get(dl["weather_code"][i], "—")} for i, d in enumerate(dl.get("time", []))]
+        return {"ok": True, "source": "open-meteo", "data": {
+            "place": place, "temp_c": cu.get("temperature_2m"), "feels_c": cu.get("apparent_temperature"),
+            "humidity": cu.get("relative_humidity_2m"), "wind_kmph": cu.get("wind_speed_10m"),
+            "sky": WC.get(cu.get("weather_code"), "—"), "forecast_3d": days}}
+    except Exception as e:
+        return {"ok": False, "why": "error", "msg": f"weather: {str(e)[:100]}"}
+
+
+def _native_dns(term: str) -> dict:
+    """DoH dns.google (no-key): domain → A/AAAA/MX/TXT/NS records."""
+    d = term.strip().lower()
+    for pre in ("dns", "resolve"):
+        if d.startswith(pre + " "):
+            d = d[len(pre):].strip()
+    d = d.removeprefix("https://").removeprefix("http://").split("/")[0]
+    if "." not in d or not all(ch.isalnum() or ch in "-." for ch in d):
+        return {"ok": False, "why": "validation", "msg": "Domain nahi lag raha — jaise google.com"}
+    recs = {}
+    for rtype in ("A", "AAAA", "MX", "TXT", "NS"):
+        try:
+            code, body = http_get(f"https://dns.google/resolve?name={urllib.parse.quote(d)}&type={rtype}", timeout=10)
+            if code != 200 or not body:
+                recs[rtype] = []; continue
+            ans = [a.get("data") for a in json.loads(body).get("Answer", []) if a.get("data")]
+            recs[rtype] = ans[:8]
+        except Exception:
+            recs[rtype] = []
+    if not any(recs.values()):
+        return {"ok": False, "why": "notfound", "msg": f"'{d}' ke koi DNS-records nahi mile"}
+    return {"ok": True, "source": "dns-google-doh", "data": {"domain": d,
+            "A": recs["A"], "AAAA": recs["AAAA"], "MX": recs["MX"], "TXT": recs["TXT"], "NS": recs["NS"]}}
+
 
 def _native_pincode(term: str) -> dict:
     code, body = http_get(f"https://api.postalpincode.in/pincode/{term}", timeout=10)
@@ -2041,6 +2115,8 @@ def _lx(tool_path: str, param: str, value: str, timeout: float = 30) -> dict:
 
 
 NATIVE_HANDLERS = {
+    "weather": _native_weather,
+    "dns": _native_dns,
     "ip": _native_ip,
     "gst": _chain(("native", _native_gst), ("lakshitx", lambda t: _lx("gst", "gst", t))),
     "pantogst": _native_pantogst,
