@@ -2997,6 +2997,39 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "adm_settings":
         await query.message.reply_text(f"🔧 Settings:\nUPI: {UPI_ID}\nName: {UPI_NAME}\nFree Credits: {FREE_CREDITS}\n\nSet in Render env:\nUPI_ID, UPI_NAME, FREE_CREDITS, TG_CREDITS — redeploy applies/reset all users", parse_mode=ParseMode.HTML)
 
+async def _poll_forever():
+    """v2.26.4c — raw long-polling → app.process_update (webhook-bypass; TG-pending-0-delivery)."""
+    from telegram import Update
+    offset = 0
+    while True:
+        try:
+            _to = 50
+            url = (f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
+                   f"?timeout={_to}&offset={offset}&allowed_updates=%5B%22message%22,%22callback_query%22%5D")
+            _code, _body = await asyncio.to_thread(_http_get_sync, url, 60)
+            if _code == 200 and _body:
+                j = json.loads(_body)
+                for upd in (j.get("result") or []):
+                    offset = upd["update_id"] + 1
+                    try:
+                        await app.process_update(Update.de_json(upd, app.bot))
+                    except Exception as _pe:
+                        print(f"poll-process err: {_pe}", flush=True)
+            elif _code == 409:
+                await asyncio.sleep(5)  # doosra-poller-tha — delete_webhook-baad-theek
+        except Exception as _e:
+            await asyncio.sleep(3)
+
+
+def _http_get_sync(url, timeout):
+    import urllib.request as _ur
+    try:
+        r = _ur.urlopen(url, timeout=timeout)
+        return r.status, r.read().decode("utf-8", "ignore")
+    except Exception as _e:
+        return 0, str(_e)
+
+
 async def main_async():
     global app, loop
     global LOOP_TS
@@ -3131,29 +3164,28 @@ async def main_async():
     await app.initialize()
     await app.start()
 
-    print("Setting webhook...")
+    # v2.26.4c: POLLING-MODE (Render-LB-stale-container-webhook-kha-jaata-tha — polling direct-TG-pull, 100%-delivery)
+    print("Starting POLLING mode (webhook disabled)...")
     try:
-        await app.bot.delete_webhook(drop_pending_updates=True)
-        await app.bot.set_webhook(url=WEBHOOK_URL, allowed_updates=["message","callback_query","my_chat_member"],
-                                   secret_token=(WEBHOOK_SECRET or None))
-        print(f"Webhook set to {WEBHOOK_URL}")
-        import fasthttp as requests
-        # Fast stable + payments live notification
-        try:
-            # v2.24.4 SPEED: startup-notification bhi to_thread me (event-loop block na ho)
-            await asyncio.to_thread(
-                requests.post,
-                f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage',
-                data={'chat_id': str(config.ADMIN_ID),
-                      'text': f'✅ 10 TOOLS LIVE!\n\n💰 UPI: {UPI_ID}\n🎁 Free: {FREE_CREDITS} credits\n👑 Premium: 30d ₹49 - 365d ₹299\n🛠️ Admin: Full controls\n⚡ Fast: No delay fix\n\nGrid: Number, TG, Family, RC+Challan, V2M, A2M, Business, Result, Web, Help\nPayments: /premium /myplan /buy\nAdmin: /admin'},
-                timeout=5)
-        except:
-            pass
-    except Exception as e:
-        print(f"Webhook set error: {e}")
-        traceback.print_exc()
+        await app.bot.delete_webhook(drop_pending_updates=False)
+        print("Webhook deleted — long-polling active")
+    except Exception as _we:
+        print(f"webhook-delete skip: {_we}")
+    app.create_task(_poll_forever())
 
-    print("10 TOOLS + PAYMENTS + CREDITS + ADMIN FAST STABLE WEBHOOK READY!")
+    import fasthttp as requests
+    # Fast stable + payments live notification
+    try:
+        await asyncio.to_thread(
+            requests.post,
+            f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage',
+            data={'chat_id': str(config.ADMIN_ID),
+                  'text': f'✅ 10 TOOLS LIVE (POLLING)!\n\n💰 UPI: {UPI_ID}\n🎁 Free: {FREE_CREDITS} credits\n👑 Premium: 30d ₹49 - 365d ₹299\n🛠️ Admin: Full controls\n⚡ Fast: No delay fix\n\nGrid: Number, TG, Family, RC+Challan, V2M, A2M, Business, Result, Web, Help\nPayments: /premium /myplan /buy\nAdmin: /admin'},
+            timeout=5)
+    except Exception:
+        pass
+
+    print("10 TOOLS + PAYMENTS + CREDITS + ADMIN — POLLING READY!")
     while True:
         LOOP_TS = time.time()
         await asyncio.sleep(60)
