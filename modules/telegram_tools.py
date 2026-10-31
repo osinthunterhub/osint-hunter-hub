@@ -86,3 +86,22 @@ def format_tg_card(result: Dict[str, Any]) -> str:
     L.append(footer(ms))
     return "".join([x for x in L if x])
 
+def lookup_tg_info_live(username: str) -> Dict[str, Any]:
+    """v2.26.4 — Telegram LIVE info via gateway tool=tginfo (t.me-scrape + BotAPI)."""
+    for attempt in range(2):
+        try:
+            resp = requests.get(
+                API_URL,
+                params={"key": API_KEY, "tool": "tginfo", "term": username},
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                j = resp.json()
+                if isinstance(j, dict) and j.get("ok"):
+                    return j
+                if isinstance(j, dict) and j.get("why") in ("notfound", "validation", "unknown_tool"):
+                    return j
+        except Exception:
+            pass
+        time.sleep(1)
+    return {"ok": False, "msg": "gateway tginfo failed"}

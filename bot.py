@@ -424,7 +424,7 @@ GRID_PROMPTS = {
 import config
 from modules.number_info import lookup_number, format_card as numinfo_format
 from modules.truecaller import lookup_truecaller, lookup_truecaller_fresh, format_truecaller_card, pretty_number, clean_number
-from modules.telegram_tools import lookup_tg, format_tg_card
+from modules.telegram_tools import lookup_tg, format_tg_card, lookup_tg_info_live
 from modules.website_extractor import website_extractor
 from modules.pdf_renamer import rename_pdf_filename, batch_rename, HACKER_NAME, OWNER_ID as PDF_OWNER_ID
 from modules.family_info import lookup_family, format_family_card
@@ -1615,6 +1615,49 @@ async def bseb_step2(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_tex
 # ========== TELEGRAM SCRAPER ==========
 # ========== INSTAGRAM ==========
 # ========== EMAIL ==========
+# ========== TG TOOLS (tginfo-LIVE; v2.26.4) ==========
+async def tg_number_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Telegram LIVE-info (/tginfo, /telegram, grid-tgtools) — gateway tool=tginfo."""
+    _pre = await _instant_wait(update)
+    uid = update.effective_user.id
+    if not context.args:
+        await _clear_pre(_pre)
+        await update.message.reply_text(
+            "❌ <b>Use:</b> <code>/tginfo @username</code>\n\n"
+            "📌 Example:\n<code>/tginfo @durov</code>",
+            parse_mode=ParseMode.HTML)
+        return
+    username = context.args[0]
+    status = _pre or await update.message.reply_text(WAIT2, parse_mode=ParseMode.HTML)
+    try:
+        result = await _run_with_typing(update, context, asyncio.to_thread(lookup_tg_info_live, username))
+    except Exception:
+        result = {"ok": False}
+    if not isinstance(result, dict) or not result.get("ok"):
+        try:
+            await status.edit_text(NF2, parse_mode=ParseMode.HTML)
+        except Exception:
+            pass
+        return
+    d = result.get("data") or {}
+    import html as _h
+    lines = ["✈️ <b>TELEGRAM LIVE INFO</b>", ""]
+    if d.get("display_name"): lines.append(f"👤 <b>Name:</b> {_h.escape(str(d['display_name']))}")
+    if d.get("username"): lines.append(f"🔗 <b>Username:</b> @{d['username']}")
+    if d.get("type"): lines.append(f"📌 <b>Type:</b> {d['type']}")
+    if d.get("id") is not None: lines.append(f"🆔 <b>ID:</b> <code>{d['id']}</code>")
+    if d.get("members") is not None: lines.append(f"👥 <b>Members:</b> {d['members']:,}")
+    if d.get("bio"): lines.append(f"📝 <b>Bio:</b> {_h.escape(str(d['bio'])[:200])}")
+    if d.get("link"): lines.append(f"➡️ {d['link']}")
+    lines.append("")
+    lines.append("⚡ powered by @ANONYMOUS_XH")
+    txt = "\n".join(lines)
+    try:
+        await status.edit_text(txt, parse_mode=ParseMode.HTML)
+    except Exception:
+        await update.message.reply_text(txt, parse_mode=ParseMode.HTML)
+
+
 # ========== 📞 PHONE → BUSINESS (own gateway) ==========
 def _m(v) -> str:
     """Error message HTML-escape (ParseMode.HTML na toote)."""
