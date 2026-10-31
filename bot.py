@@ -200,12 +200,14 @@ def process_update_sync(data):
     try:
         global loop
         _UPSTATS["thread"] = _UPSTATS.get("thread", 0) + 1
-        # Wait for loop to be ready max 5 sec
-        for _ in range(50):
+        # v2.26.4b: app/loop boot-tak MAX 240s intezar (0.5s steps) — early-inject-drop-band
+        _ready = False
+        for _ in range(480):
             if loop and app:
+                _ready = True
                 break
-            time.sleep(0.1)
-        if loop and app:
+            time.sleep(0.5)
+        if _ready:
             _fut = asyncio.run_coroutine_threadsafe(handle_update(data), loop)
             _UPSTATS["sched"] = _UPSTATS.get("sched", 0) + 1
             try:
