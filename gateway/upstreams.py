@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.26.2"
+VERSION = "2.26.3"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -128,6 +128,7 @@ TOOLS = {
     "pincode":         "Pincode se post offices (free)",
     "familyinfo":      "Aadhaar se poore parivaar ki jankari (v2.7 NATIVE — sarkari ration, muft)",
     "num":             "Mobile number se owner ki jankari (v2.7 NATIVE — sarkari num, muft)",
+    "tginfo":          "Telegram LIVE info (user/channel/group: name, bio, members, id, photo) — t.me + Bot-API, no-key",
     "tgnum":           "Telegram username/ID/phone — owner ka apna99k local dataset pehle, phir sarkari/supabase chain (v2.9)",
     "vehicle":         "Vehicle full report (owner, model, RTO, insurance, PUC) — LakshitX rtoData primary + osint fallback",
     "weather":         "Mausam report (koi bhi city/lat,lon) — current + 3-day forecast (Open-Meteo, no-key)",
@@ -168,6 +169,10 @@ _EXAMPLES = {
 }
 
 ALIASES = {
+    "tguser": "tginfo",
+    "tgchat": "tginfo",
+    "tggroup": "tginfo",
+    "channelinfo": "tginfo",
     "weather_info": "weather",
     "mausam": "weather",
     "mausam_info": "weather",
@@ -217,6 +222,7 @@ _RE = {
     "pincode":         re.compile(r"^[1-9][0-9]{5}$"),
     "familyinfo":      re.compile(r"^[0-9]{12}$"),
     "num":             re.compile(r"^[6-9][0-9]{9}$"),
+    "tginfo":          re.compile(r"^@?[A-Za-z][A-Za-z0-9_]{2,31}$|^https?://t\.me/\S+$|^tg://\S+$|^-?[0-9]{5,20}$"),
     "tgnum":           re.compile(r"^@?[A-Za-z0-9_]{3,32}$|^[0-9]{5,15}$"),
     "vehicle":         re.compile(r"^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{3,4}$"),
     "vehicletomobile": re.compile(r"^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{3,4}$"),
@@ -702,6 +708,96 @@ def _tg_local(term: str):
             "source": f"owner-local-dataset ({_TG['count']} records)",
         },
     }
+
+
+def _native_tginfo(term: str) -> dict:
+    """v2.26.3 - Telegram LIVE-info (user/channel/group): t.me-scrape (no-key, sabke liye)
+    + Bot-API getChat/getChatMemberCount enrich (env TELEGRAM_BOT_TOKEN, channel/group deep).
+    Ye wo kaam hai jo leaked member-dumps karta tha - par LIVE aur legal (kabhi-stale-nahi)."""
+    t = term.strip()
+    uname, numid = None, None
+    m = re.match(r"^@([A-Za-z][A-Za-z0-9_]{2,31})$", t)
+    if m:
+        uname = m.group(1)
+    else:
+        m = re.search(r"t\.me/([A-Za-z][A-Za-z0-9_]{2,31})", t) or \
+            re.search(r"tg://resolve\?domain=([A-Za-z][A-Za-z0-9_]{2,31})", t)
+        if m:
+            uname = m.group(1)
+        elif re.match(r"^-?[0-9]{5,20}$", t):
+            numid = t
+    if not uname and not numid:
+        return {"ok": False, "why": "validation", "msg": "Telegram @username / t.me-link / numeric-id do"}
+    try:
+        import html as _html
+        data = {}
+        # ---- 1) t.me public page (users ke liye MAIN source; channels ko bhi chalta) ----
+        if uname:
+            c, body = http_get(f"https://t.me/{uname}", timeout=15)
+            if c == 200 and body and "tgme_page" in body:
+                nm = re.search(r'og:title" content="([^"]*)"', body)
+                bio = re.search(r'og:description" content="([^"]*)"', body)
+                img = re.search(r'og:image" content="([^"]*)"', body)
+                extra = re.search(r'tgme_page_extra">([^<]*)<', body)
+                data = {
+                    "username": uname,
+                    "link": f"https://t.me/{uname}",
+                    "display_name": _html.unescape(nm.group(1)).strip() if nm else "",
+                    "bio": _html.unescape(bio.group(1)).strip() if bio else "",
+                    "photo": img.group(1) if img else "",
+                }
+                ex = _html.unescape(extra.group(1)).strip() if extra else ""
+                if ex:
+                    data["extra"] = ex
+                    mm = re.search(r"([0-9][0-9 ,.]*)\s*(subscriber|member)", ex.lower())
+                    if mm:
+                        cnt = int(re.sub(r"[^0-9]", "", mm.group(1)) or 0)
+                        data["members"] = cnt
+                        data["type"] = "channel" if "subscriber" in ex.lower() else "group"
+        # ---- 2) Bot-API enrich (TELEGRAM_BOT_TOKEN env; channel/group deep-info) ----
+        tok = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+        if tok and (uname or numid):
+            cid = f"@{uname}" if uname else numid
+            c2, b2 = http_get(f"https://api.telegram.org/bot{tok}/getChat?chat_id={urllib.parse.quote(cid)}", timeout=15)
+            if c2 == 200 and b2:
+                try:
+                    j = json.loads(b2)
+                except Exception:
+                    j = {}
+                if j.get("ok") and isinstance(j.get("result"), dict):
+                    rr = j["result"]
+                    data["id"] = rr.get("id")
+                    data["type"] = rr.get("type") or data.get("type")
+                    if rr.get("title"):
+                        data["display_name"] = rr.get("title")
+                    if rr.get("first_name"):
+                        data["display_name"] = (data.get("display_name") or rr.get("first_name"))
+                    if rr.get("username"):
+                        data["username"] = rr.get("username")
+                    if rr.get("bio") or rr.get("description"):
+                        data["bio"] = rr.get("bio") or rr.get("description")
+                    if rr.get("active_usernames"):
+                        data["active_usernames"] = rr.get("active_usernames")
+                    if rr.get("invite_link"):
+                        data["invite_link"] = rr.get("invite_link")
+                    if rr.get("linked_chat_id"):
+                        data["linked_chat_id"] = rr.get("linked_chat_id")
+                    c3, b3 = http_get(f"https://api.telegram.org/bot{tok}/getChatMemberCount?chat_id={urllib.parse.quote(cid)}", timeout=15)
+                    if c3 == 200 and b3:
+                        try:
+                            j3 = json.loads(b3)
+                            if j3.get("ok"):
+                                data["members"] = j3.get("result")
+                        except Exception:
+                            pass
+            elif c2 == 400 and "chat not found" in str(b2).lower() and not data:
+                return {"ok": False, "why": "notfound", "msg": f"'{uname or numid}' nahi mila (private ya galat)"}
+        if not data or not data.get("display_name"):
+            return {"ok": False, "why": "notfound", "msg": "Telegram pe info nahi mili"}
+        data.setdefault("type", "user")
+        return {"ok": True, "source": "t.me+botapi", "data": data}
+    except Exception as e:
+        return {"ok": False, "why": "error", "msg": f"tginfo: {str(e)[:90]}"}
 
 
 def _native_tgnum(term: str) -> dict:
@@ -2218,6 +2314,7 @@ NATIVE_HANDLERS = {
                       ("native", _native_vehicle),
                       ("vahanx", _vahanx_rc),
                       ("xtrace", lambda t: _xcall("vehicle_full", t))),
+    "tginfo": _native_tginfo,
     "tgnum": _chain(("apna-db", _ldb_tg),
                     ("native", _native_tgnum)),
     # vehicletomobile: humara 6.7s par chalta hai, X_TRACE 10.6s + kuch gaadi 404 -> native primary
