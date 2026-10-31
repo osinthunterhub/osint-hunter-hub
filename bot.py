@@ -135,6 +135,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
                               + " | backups: " + str(_vs.get("count", 0))
                               + " | last-ok: " + str(_vs.get("age_s", "-")) + "s"
                               + " | db_users: " + str(_vs.get("db_users", 0))
+                              + " | ups: " + str(globals().get("_UPSTATS", {}).get("recv", 0)) + "/" + str(globals().get("_UPSTATS", {}).get("err", 0))
                               + (("| err: " + str(_vs.get("last_err"))[:140]) if _vs.get("last_err") else "")
                               + "</p>")
                     _html = ("<html><body><h1>🚀 OSINT Hunter Hub — LIVE ⚡</h1>"
@@ -211,8 +212,11 @@ def process_update_sync(data):
         print(f"process_update_sync error: {e}")
         traceback.print_exc()
 
+_UPSTATS = {"recv": 0, "err": 0}
+
 async def handle_update(data):
     uid_tag = data.get('update_id')
+    _UPSTATS["recv"] += 1
     try:
         from telegram import Update
         global app
@@ -222,6 +226,7 @@ async def handle_update(data):
             update = Update.de_json(data, app.bot)
             await app.process_update(update)
     except Exception as e:
+        _UPSTATS["err"] += 1
         CRASH["caught"] += 1
         print(f"handle_update error: {e}")
         traceback.print_exc()
