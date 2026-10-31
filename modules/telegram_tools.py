@@ -6,6 +6,7 @@ Gateway: utility-api-vu83 (owner ka apna local dataset)
 import os
 import re
 import time
+import requests
 from modules.cardstyle import box, field, sep, footer
 from .fast_cache import with_cache
 from typing import Dict, Any
