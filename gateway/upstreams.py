@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.26.0"
+VERSION = "2.26.1"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -405,6 +405,25 @@ def _native_weather(term: str) -> dict:
     for pre in ("weather", "mausam"):
         if t.lower().startswith(pre):
             t = t[len(pre):].strip(" :,-")
+    # ---- provider-1: wttr.in (no-key, Render shared-IP pe bhi khula) ----
+    try:
+        w_code, w_body = http_get(f"https://wttr.in/{urllib.parse.quote(t)}?format=j1&lang=en", timeout=14,
+                                  headers={"Accept-Encoding": "identity", "User-Agent": "curl/8.5.0"})
+        if w_code == 200 and w_body:
+            j = json.loads(w_body)
+            cc = (j.get("current_condition") or [{}])[0]
+            days = []
+            for d in (j.get("weather") or [])[:3]:
+                days.append({"date": d.get("date"), "max": d.get("maxtempC"), "min": d.get("mintempC"),
+                             "sky": ((d.get("hourly") or [{}])[4].get("weatherDesc") or [{}])[0].get("value", "—")})
+            if cc:
+                return {"ok": True, "source": "wttr.in", "data": {
+                    "place": t, "temp_c": cc.get("temp_C"), "feels_c": cc.get("FeelsLikeC"),
+                    "humidity": cc.get("humidity"), "wind_kmph": cc.get("windspeedKmph"),
+                    "sky": ((cc.get("weatherDesc") or [{}])[0].get("value") or "—"), "forecast_3d": days}}
+    except Exception:
+        pass
+    # ---- provider-2: Open-Meteo (geocode + forecast) ----
     try:
         if "," in t and all(p.replace(".", "").isdigit() and p.strip() for p in t.split(",", 1)):
             la, lo = t.split(",", 1)
