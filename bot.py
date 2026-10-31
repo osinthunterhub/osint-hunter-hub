@@ -99,7 +99,7 @@ async def _run_with_typing(update, context, work):
             await task
         except asyncio.CancelledError:
             pass
-BOT_VERSION = ("v2.26.4e WEBHOOK-RESTORED ⚡fasthttp — owner HIMANSHU · @ANONYMOUS_XH · admin ID private Render config")
+BOT_VERSION = ("v2.24.9 VAULT-FIX ⚡fasthttp — owner HIMANSHU · @ANONYMOUS_XH · admin ID private Render config")
 # v2.0 SECURITY: token sirf Render env se (pehle public repo me hardcoded tha!)
 BOT_TOKEN = os.getenv('BOT_TOKEN', '').strip()
 PORT = int(os.getenv('PORT','10000'))
@@ -134,8 +134,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
                     _vline = ("<p>vault: " + ("ON" if _vs.get("token_set") else ("OFF" if globals().get("VAULT_OK") is False else "…"))
                               + " | backups: " + str(_vs.get("count", 0))
                               + " | last-ok: " + str(_vs.get("age_s", "-")) + "s"
-                              + " | db_users: " + str(_vs.get("db_users", 0))
-                              + " | ups: " + str(globals().get("_UPSTATS", {})) + " | loop: " + (str(int(time.time() - globals().get("LOOP_TS", 0))) + "s" if globals().get("LOOP_TS") else "DEAD")
+                              + " | db_users: " + str(_vs.get("db_users", 0)) + " | ups: " + str(globals().get("_UPSTATS", {}))
                               + (("| err: " + str(_vs.get("last_err"))[:140]) if _vs.get("last_err") else "")
                               + "</p>")
                     _html = ("<html><body><h1>🚀 OSINT Hunter Hub — LIVE ⚡</h1>"
@@ -196,36 +195,21 @@ class WebhookHandler(BaseHTTPRequestHandler):
     
     def log_message(self, *args): pass
 
-_UPQ = []  # v2.26.4f: webhook→queue→main-loop-consumer (threadsafe-loop-ki-jagah — single-loop-guarantee)
-
 def process_update_sync(data):
     try:
-        _UPSTATS["thread"] = _UPSTATS.get("thread", 0) + 1
-        if len(_UPQ) < 500:
-            _UPQ.append(data)
-            _UPSTATS["q"] = len(_UPQ)
+        global loop
+        # Wait for loop to be ready max 5 sec
+        for _ in range(50):
+            if loop and app:
+                break
+            time.sleep(0.1)
+        if loop and app:
+            asyncio.run_coroutine_threadsafe(handle_update(data), loop)
+        else:
+            print("Loop/App not ready, dropping update", data.get('update_id'))
     except Exception as e:
         print(f"process_update_sync error: {e}")
         traceback.print_exc()
-
-
-async def _upqueue_consumer():
-    """v2.26.4f — main-loop ke andar hi webhook-updates process (thread-crossing-khatam)."""
-    while True:
-        try:
-            if _UPQ:
-                data = _UPQ.pop(0)
-                _UPSTATS["q"] = len(_UPQ)
-                try:
-                    await handle_update(data)
-                except Exception as _he:
-                    _UPSTATS["err"] += 1
-                    print(f"consumer-handle err: {_he}", flush=True)
-            else:
-                await asyncio.sleep(0.3)
-        except Exception as _ce:
-            print(f"consumer-loop err: {_ce}", flush=True)
-            await asyncio.sleep(2)
 
 _UPSTATS = {"recv": 0, "err": 0}
 
@@ -3000,44 +2984,9 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "adm_settings":
         await query.message.reply_text(f"🔧 Settings:\nUPI: {UPI_ID}\nName: {UPI_NAME}\nFree Credits: {FREE_CREDITS}\n\nSet in Render env:\nUPI_ID, UPI_NAME, FREE_CREDITS, TG_CREDITS — redeploy applies/reset all users", parse_mode=ParseMode.HTML)
 
-async def _poll_forever():
-    """v2.26.4c — raw long-polling → app.process_update (webhook-bypass; TG-pending-0-delivery)."""
-    from telegram import Update
-    offset = 0
-    while True:
-        try:
-            _to = 50
-            url = (f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
-                   f"?timeout={_to}&offset={offset}&allowed_updates=%5B%22message%22,%22callback_query%22%5D")
-            _code, _body = await asyncio.to_thread(_http_get_sync, url, 60)
-            if _code == 200 and _body:
-                j = json.loads(_body)
-                for upd in (j.get("result") or []):
-                    offset = upd["update_id"] + 1
-                    try:
-                        await app.process_update(Update.de_json(upd, app.bot))
-                    except Exception as _pe:
-                        print(f"poll-process err: {_pe}", flush=True)
-            elif _code == 409:
-                await asyncio.sleep(5)  # doosra-poller-tha — delete_webhook-baad-theek
-        except Exception as _e:
-            await asyncio.sleep(3)
-
-
-def _http_get_sync(url, timeout):
-    import urllib.request as _ur
-    try:
-        r = _ur.urlopen(url, timeout=timeout)
-        return r.status, r.read().decode("utf-8", "ignore")
-    except Exception as _e:
-        return 0, str(_e)
-
-
 async def main_async():
     global app, loop
-    global LOOP_TS
     loop = asyncio.get_running_loop()
-    LOOP_TS = time.time()
     print("Building 8 TOOLS FAST STABLE app...")
     # v2.5.5 (bot-1 jaisa): Render env FREE_CREDITS/TG_CREDITS badle -> sab reset
     try:
@@ -3167,46 +3116,35 @@ async def main_async():
     await app.initialize()
     await app.start()
 
-    # v2.26.4e: WEBHOOK-mode RESTORED (v2.24.9-proven) — loop global-2996-par-declared
-    loop = asyncio.get_running_loop()
+    print("Setting webhook...")
     try:
+        await app.bot.delete_webhook(drop_pending_updates=True)
         await app.bot.set_webhook(url=WEBHOOK_URL, allowed_updates=["message","callback_query","my_chat_member"],
                                    secret_token=(WEBHOOK_SECRET or None))
-        print(f"Webhook set to {WEBHOOK_URL}", flush=True)
-    except Exception as _we:
-        print(f"Webhook set error: {_we}", flush=True)
-
-    import fasthttp as requests
-    # Fast stable + payments live notification
-    try:
-        await asyncio.to_thread(
-            requests.post,
-            f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage',
-            data={'chat_id': str(config.ADMIN_ID),
-                  'text': f'✅ 10 TOOLS LIVE!\n\n💰 UPI: {UPI_ID}\n🎁 Free: {FREE_CREDITS} credits\n👑 Premium: 30d ₹49 - 365d ₹299\n🛠️ Admin: Full controls\n⚡ Fast: No delay fix\n\nGrid: Number, TG, Family, RC+Challan, V2M, A2M, Business, Result, Web, Help\nPayments: /premium /myplan /buy\nAdmin: /admin'},
-            timeout=5)
-    except Exception:
-        pass
+        print(f"Webhook set to {WEBHOOK_URL}")
+        import fasthttp as requests
+        # Fast stable + payments live notification
+        try:
+            # v2.24.4 SPEED: startup-notification bhi to_thread me (event-loop block na ho)
+            await asyncio.to_thread(
+                requests.post,
+                f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage',
+                data={'chat_id': str(config.ADMIN_ID),
+                      'text': f'✅ 10 TOOLS LIVE!\n\n💰 UPI: {UPI_ID}\n🎁 Free: {FREE_CREDITS} credits\n👑 Premium: 30d ₹49 - 365d ₹299\n🛠️ Admin: Full controls\n⚡ Fast: No delay fix\n\nGrid: Number, TG, Family, RC+Challan, V2M, A2M, Business, Result, Web, Help\nPayments: /premium /myplan /buy\nAdmin: /admin'},
+                timeout=5)
+        except:
+            pass
+    except Exception as e:
+        print(f"Webhook set error: {e}")
+        traceback.print_exc()
 
     print("10 TOOLS + PAYMENTS + CREDITS + ADMIN FAST STABLE WEBHOOK READY!")
-    print("upqueue-INLINE-consumer ON", flush=True)
     while True:
-        # v2.26.4g: consumer-INLINE (koi-alag-task-nahi — GUARANTEED-execution main-loop-me)
-        _n = 0
-        while _UPQ:
-            data = _UPQ.pop(0)
-            _n += 1
-            try:
-                await handle_update(data)
-            except Exception as _he:
-                _UPSTATS["err"] += 1
-                print(f"inline-handle err: {_he}", flush=True)
-        _UPSTATS["q"] = len(_UPQ)
-        LOOP_TS = time.time()
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(60)
+        # (keepalive self_ping_loop me hai — bot khud ko + gateway ko har 5 min ping karta hai)
+        print(f"10 tools + payments alive - Users: {len(all_user_ids())} - Premium: {len(premium_users())} - Pending: {pending_payments_count()}")
 
 def main():
-    # v2.26.4e — PROVEN-boot (v2.24.9-flow): asyncio.run(main_async()) — app+handlers+webhook yahin banta hai
     asyncio.run(main_async())
 
 if __name__ == "__main__":
