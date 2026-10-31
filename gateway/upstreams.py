@@ -2,7 +2,7 @@
 #  Utility API — upstreams (native free + new providers)  v2.6.0
 #  v2.6.0: vehicle_full (sarkariallupdates) primary + fallback osint-apis-hub, new tools vehicle_to_number + aadhaar2num, TG API
 #  No heavy libs — stdlib only, RAM ~30MB
-#  NATIVE: ip, gst, pantogst, ifsc, pincode, vehicle, tgnum, vehicletomobile, aadhaar2num,
+#  NATIVE: ip, gst, ifsc, pincode, vehicle, vehicletomobile, aadhaar2num,
 #           num, familyinfo, paknum  (v2.7 — purana provider mar chuka tha)
 #  PROXY: aadhar, pakvehicle   (advpan + upi PERMANENTLY DELETED — owner order v2.7.1)
 # =====================================================================
@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.26.3"
+VERSION = "2.26.4"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -123,13 +123,11 @@ def _aph_family(term):
 TOOLS = {
     "ip":              "IP / domain ki poori jankari (free, koi key nahi)",
     "gst":             "GSTIN se company ki jankari (v2.4 new: gst-direct mastersindia, fallback jamku free)",
-    "pantogst":        "PAN se GSTIN list + full company details (pan-to-gst-v4 v2.4)",
     "ifsc":            "IFSC se bank branch (free)",
     "pincode":         "Pincode se post offices (free)",
     "familyinfo":      "Aadhaar se poore parivaar ki jankari (v2.7 NATIVE — sarkari ration, muft)",
     "num":             "Mobile number se owner ki jankari (v2.7 NATIVE — sarkari num, muft)",
     "tginfo":          "Telegram LIVE info (user/channel/group: name, bio, members, id, photo) — t.me + Bot-API, no-key",
-    "tgnum":           "Telegram username/ID/phone — owner ka apna99k local dataset pehle, phir sarkari/supabase chain (v2.9)",
     "vehicle":         "Vehicle full report (owner, model, RTO, insurance, PUC) — LakshitX rtoData primary + osint fallback",
     "weather":         "Mausam report (koi bhi city/lat,lon) — current + 3-day forecast (Open-Meteo, no-key)",
     "dns":             "Domain DNS records (A/AAAA/MX/TXT/NS) — dns.google DoH, no-key",
@@ -143,7 +141,6 @@ TOOLS = {
     "insta":           "Instagram profile info — followers/bio/pic/verified (v2.24.7 NATIVE)",
     "gstcheck":        "v2.12 NATIVE OFFLINE: GSTIN checksum validate (0ms)",
     "webextract":      "v2.12 NATIVE SELF-HOSTED: URL -> title/desc/emails/phones/links (koi third party nahi)",
-    "aadhaar2pan":     "Aadhaar se PAN (masked) — sarkariallupdates aadhaar2pan (v2.23 NEW, Ronak source)",
     "imei":            "IMEI forensics — Luhn check + reporting body (NATIVE OFFLINE, 0ms, never expire)",
     "fastag":          "FASTag NETC info — RC se tags, bank, status, issue date",
     # v2.15 — X_TRACE pack (comparison ke baad)
@@ -151,7 +148,7 @@ TOOLS = {
     "aadhaar":         "v2.15 RICH AADHAAR: aadhaar -> us se jude saare records (naam/address/pita/mobile) — X_TRACE, ghar ke kuTumb ke liye",
 }
 
-NATIVE = ("ip", "gst", "pantogst", "ifsc", "pincode", "vehicle", "tgnum", "vehicletomobile", "aadhaar2num",
+NATIVE = ("ip", "gst", "ifsc", "pincode", "vehicle", "vehicletomobile", "aadhaar2num",
           "num", "familyinfo", "phonebiz",
           "plate", "aadhaarcheck", "gstcheck", "webextract",
           "tc", "aadhaar")   # v2.15 — X_TRACE pack
@@ -159,11 +156,11 @@ NATIVE = ("ip", "gst", "pantogst", "ifsc", "pincode", "vehicle", "tgnum", "vehic
 # har tool ka ek ready example (key-studio ke URLs aur docs ke liye)
 _EXAMPLES = {
     "ip": "8.8.8.8", "ifsc": "SBIN0000001", "pincode": "800001",
-    "gst": "27AAPFU0939F1ZV", "pantogst": "AAACR5055K", "plate": "HR26DK8337",
+    "gst": "27AAPFU0939F1ZV", "plate": "HR26DK8337",
     "aadhaarcheck": "234567890123", "gstcheck": "27AAPFU0939F1ZV",
     "webextract": "https://example.com", "num": "9006640786",
     "familyinfo": "123412341234", "aadhaar": "123412341234",
-    "aadhaar2num": "123412341234", "tgnum": "@telegram",
+    "aadhaar2num": "123412341234",
     "tc": "8448140878", "vehicle": "UP16FB2070", "vehicletomobile": "UP16FB2070",
     "phonebiz": "9876543210",
 }
@@ -180,13 +177,10 @@ ALIASES = {
     "resolve": "dns",
     "lynxosint__vehicle": "vehicle",
     "lynxosint__ip": "ip",
-    "telegramtonumber": "tgnum",
     "rc": "vehicle",
     "vehicle_rc": "vehicle",
     "vehicle_full": "vehicle",
     "gst_info": "gst",
-    "pan_to_gst": "pantogst",
-    "pantogst_v4": "pantogst",
     "vehicle_to_number": "vehicletomobile",
     "vehicle_to_mobile": "vehicletomobile",
     "rc_to_mobile": "vehicletomobile",
@@ -217,17 +211,14 @@ ALIASES = {
 _RE = {
     "ip":              re.compile(r"^([0-9]{1,3}\.){3}[0-9]{1,3}$|^[0-9a-fA-F:]+$|^[a-z0-9.-]+\.[a-z]{2,}$"),
     "gst":             re.compile(r"^[0-9A-Z]{15}$"),
-    "pantogst":        re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]$|^[A-Z]{4}[0-9]{5}[A-Z0-9]?$"),
     "ifsc":            re.compile(r"^[A-Z]{4}0[A-Z0-9]{6}$"),
     "pincode":         re.compile(r"^[1-9][0-9]{5}$"),
     "familyinfo":      re.compile(r"^[0-9]{12}$"),
     "num":             re.compile(r"^[6-9][0-9]{9}$"),
     "tginfo":          re.compile(r"^@?[A-Za-z][A-Za-z0-9_]{2,31}$|^https?://t\.me/\S+$|^tg://\S+$|^-?[0-9]{5,20}$"),
-    "tgnum":           re.compile(r"^@?[A-Za-z0-9_]{3,32}$|^[0-9]{5,15}$"),
     "vehicle":         re.compile(r"^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{3,4}$"),
     "vehicletomobile": re.compile(r"^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{3,4}$"),
     "aadhaar2num":     re.compile(r"^[0-9]{12}$"),
-    "aadhaar2pan":     re.compile(r"^[0-9]{12}$"),
     "phonebiz":        re.compile(r"^\+?[0-9][0-9 \-]{6,17}$"),
     "fastag":          re.compile(r"^[A-Za-z]{2}[0-9]{1,2}[A-Za-z]{0,3}[0-9]{3,4}$"),
     # v2.12 — offline tools (validation khud handler me bhi hai)
@@ -244,22 +235,14 @@ _RE = {
 }
 
 def validate(tool: str, term: str) -> str:
-    t = (term or "").strip().upper() if tool in ("ifsc", "gst", "vehicle", "pantogst", "fastag") else (term or "").strip()
+    t = (term or "").strip().upper() if tool in ("ifsc", "gst", "vehicle", "fastag") else (term or "").strip()
     if tool in ("familyinfo", "num", "pincode"):
         t = re.sub(r"[^0-9]", "", t)
-    if tool == "tgnum" and t.startswith("@"):
-        t = term.strip()
-    if tool == "pantogst":
-        t = re.sub(r"[^A-Z0-9]", "", t.upper())
     if not t or len(t) > 64:
         return ""
     rx = _RE.get(tool)
     if rx and not rx.match(t):
-        # for pantogst allow 10 char PAN
-        if tool == "pantogst" and len(t) == 10:
-            return t
-        if tool != "pantogst":
-            return ""
+        return ""
     return t
 
 # =====================================================================
@@ -554,162 +537,6 @@ def _native_gst(term: str) -> dict:
     except Exception:
         return {"ok": False, "why": "notfound", "msg": "GST record nahi mila"}
 
-def _native_pantogst(term: str) -> dict:
-    """v2.4: PAN to GST — v4 most detailed + fallback v3/v1."""
-    pan = term.upper()
-    for endpoint in ("pan-to-gst-v4", "pan-to-gst-v3", "pan-to-gst"):
-        try:
-            url = f"{GST_API_BASE}/{endpoint}?key={urllib.parse.quote(GST_API_KEY)}&pan={urllib.parse.quote(pan)}"
-            code, body = http_get(url, timeout=20)
-            if code == 200 and body:
-                j = json.loads(body)
-                if j.get("success"):
-                    gd = j.get("gst_details")
-                    if isinstance(gd, dict) and gd.get("gstin"):
-                        return {"ok": True, "data": {"pan": pan, "gst_details": gd, "all_gstins": [gd.get("gstin")]}, "pan": pan}
-                    if isinstance(gd, list) and gd:
-                        gstins = [g.get("gstin") for g in gd if g.get("gstin")]
-                        return {"ok": True, "data": {"pan": pan, "gst_details": gd[0] if len(gd)==1 else gd, "all_gstins": gstins}, "pan": pan}
-        except Exception:
-            continue
-    return {"ok": False, "why": "notfound", "msg": "Is PAN par koi GSTIN nahi mila"}
-
-    # v2.23.1 — SARKARI pan2gst fallback (purana provider expire ho gaya tha).
-    # Source ka JSON broken hota hai (stray string lines) — isliye GSTIN regex-se nikaalte hain.
-    try:
-        url2 = (f"{SARKARI_API_BASE}?api=pan2gst&key={urllib.parse.quote(SARKARI_API_KEY)}"
-                f"&pan2gst={urllib.parse.quote(pan)}")
-        code2, body2 = http_get(url2, timeout=15)
-        if code2 == 200 and body2:
-            gstins = sorted(set(re.findall(
-                r"\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]\b", body2)))
-            if gstins:
-                return {"ok": True, "source": "sarkari-pan2gst",
-                        "data": {"pan": pan, "gstin_count": len(gstins),
-                                 "gstins": gstins[:10],
-                                 "tip": "Detail ke liye gst tool me GSTIN daalo"}}
-            if '"status": "success"' in body2 or '"status":"success"' in body2:
-                return {"ok": False, "why": "notfound", "msg": "Is PAN par koi GSTIN registered nahi hai"}
-    except Exception:
-        pass
-
-
-def _tme_public(q: str, tmo: float = 8.0) -> dict:
-    """v2.6.1 — Telegram ki PUBLIC profile (t.me/<username>): naam + photo + link.
-    Free + legal + ~0.5s. Lautata: {"exists":True,"name":..,"photo":..,"url":..}
-    ya {"exists":False} ya None (network fail)."""
-    import html as _html
-    uname = str(q or "").strip().lstrip("@").strip()
-    if not uname or not _re_tme.match(uname):
-        return None
-    code, body = http_get(f"https://t.me/{uname}", timeout=tmo)
-    if code != 200 or not body:
-        return None
-    mt = re.search(r'<meta property="og:title" content="([^"]*)"', body)
-    mi = re.search(r'<meta property="og:image" content="([^"]*)"', body)
-    title = _html.unescape(mt.group(1)) if mt else ""
-    photo = mi.group(1) if mi else ""
-    if not title or title.startswith("Telegram: Contact @") or "t_logo" in photo:
-        return {"exists": False}
-    return {"exists": True, "name": title,
-            "photo": ("" if "t_logo" in photo else photo),
-            "url": f"https://t.me/{uname}"}
-
-
-_re_tme = re.compile(r"^[A-Za-z0-9_]{3,32}$")
-
-_TG_PAID_NOTE = ("Mobile-number database ab PAID ho gaya hai (provider: 'CHALO AB BUY KRO') "
-                 "- isliye number nahi mil sakta. Upar jo hai wo Telegram ki "
-                 "PUBLIC profile info hai (t.me se).")
-
-
-# ══════════════════════════════════════════════════════════════════
-#  v2.9.0 — OWNER KA APNA LOCAL TG DATASET (99,247 records)
-#  User ne files di (23 Oct 2026): har line "User ID | Phone | Username".
-#  Repo ke andar datasets/tg_numbers.txt — kabhi expire nahi, koi paid
-#  source nahi, boot par lazy-load (O(1) lookups baad me).
-#  Miss hone par _native_tgnum ki PURANI chain chalti raheti hai.
-# ══════════════════════════════════════════════════════════════════
-_TG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datasets", "tg_numbers.txt")
-_TG_RX = re.compile(r"User ID:\s*(\d+)\s*\|\s*Phone:\s*(\d+)\s*\|\s*Username:\s*(.*)$")
-_TG = {"phone": {}, "uid": {}, "user": {}, "count": 0}
-_TG_READY = False
-_TG_LOCK = threading.Lock()
-
-
-def _tg_ensure() -> None:
-    """Lazy-load — boot fast, dataset sirf pehle TG call par parse (≈0.3s)."""
-    global _TG_READY
-    if _TG_READY:
-        return
-    with _TG_LOCK:
-        if _TG_READY:
-            return
-        try:
-            with open(_TG_FILE, "r", encoding="utf-8", errors="replace") as fh:
-                for line in fh:
-                    m = _TG_RX.match(line.strip())
-                    if not m:
-                        continue
-                    uid, phone, uname = m.group(1), m.group(2), m.group(3).strip()
-                    rec = (uid, phone, uname)
-                    key10 = phone[2:] if (len(phone) == 12 and phone.startswith("91")) else phone
-                    if len(key10) == 10:
-                        _TG["phone"].setdefault(key10, []).append(rec)
-                    _TG["uid"].setdefault(uid, []).append(rec)
-                    if uname:
-                        _TG["user"].setdefault(uname.lower(), []).append(rec)
-                    _TG["count"] += 1
-        except Exception:
-            pass
-        _TG_READY = True
-
-
-def _tg_local(term: str):
-    """Owner dataset: phone / TG-ID / username -> record dict, warna None."""
-    _tg_ensure()
-    t = str(term or "").strip()
-    if not t:
-        return None
-    hits, via = [], ""
-    if t.isdigit():
-        d = t
-        if len(d) == 12 and d.startswith("91"):
-            d = d[2:]
-        elif len(d) == 11 and d.startswith("0"):
-            d = d[1:]
-        if len(d) == 10 and d[0] in "6789":
-            hits = _TG["phone"].get(d, [])
-            via = "phone"
-        if not hits:
-            hits = _TG["uid"].get(t, [])
-            via = "telegram_id"
-        if not hits and len(d) == 10:
-            hits = _TG["phone"].get(d, [])
-            via = "phone"
-    else:
-        hits = _TG["user"].get(t.lstrip("@").lower(), [])
-        via = "username"
-    if not hits:
-        return None
-    uid, phone, uname = hits[0]
-    ten = phone[2:] if (len(phone) == 12 and phone.startswith("91")) else phone
-    return {
-        "ok": True,
-        "data": {
-            "telegram_id": uid,
-            "tg_id": uid,
-            "mobile": ten,
-            "owner_number": ten,
-            "username": uname or "",
-            "country_code": "+91",
-            "matched_via": via,
-            "total_matches": len(hits),
-            "source": f"owner-local-dataset ({_TG['count']} records)",
-        },
-    }
-
-
 def _native_tginfo(term: str) -> dict:
     """v2.26.3 - Telegram LIVE-info (user/channel/group): t.me-scrape (no-key, sabke liye)
     + Bot-API getChat/getChatMemberCount enrich (env TELEGRAM_BOT_TOKEN, channel/group deep).
@@ -799,96 +626,6 @@ def _native_tginfo(term: str) -> dict:
     except Exception as e:
         return {"ok": False, "why": "error", "msg": f"tginfo: {str(e)[:90]}"}
 
-
-def _native_tgnum(term: str) -> dict:
-    """v2.5 — Telegram username/ID -> mobile (sarkariallupdates.com).
-    API: https://api.sarkariallupdates.com/api?=tg&key=30day&q=@Perfectamit65
-    Returns: OwnerNumber, TG-ID, Country-Code
-    """
-    # Clean term: keep @ if present, else as is
-    q = term.strip()
-
-    # v2.9.0 (USER ORDER 23 Oct): owner ka apna local99k dataset SABSE PEHLE.
-    # Phone / TG-ID / username teeno yahan — zero external API, kabhi expire
-    # nahi hoga (repo: datasets/tg_numbers.txt). Miss par purani chain aage.
-    loc = _tg_local(q)
-    if loc:
-        return loc
-    # API expects q with or without @, both work — we keep as user typed
-    # Ensure @ for username? API works with @Perfectamit65 and Perfectamit65 both, but @ is safer for username
-    # For numeric ID, no @
-    try:
-        # URL encode q
-        url = f"{TG_API_BASE}?=tg&key={urllib.parse.quote(TG_API_KEY)}&q={urllib.parse.quote(q)}"
-        code, body = http_get(url, timeout=20)
-        if code == 200 and body:
-            # API returns invalid JSON with trailing comma — clean it
-            try:
-                j = json.loads(body)
-            except Exception:
-                # remove trailing commas before } or ]
-                body_clean = re.sub(r',\s*}', '}', body)
-                body_clean = re.sub(r',\s*]', ']', body_clean)
-                j = json.loads(body_clean)
-            # Success cases:
-            # {"status":"success","data":{"OwnerNumber":"9310837765","TG -ID":"5685588580","Country-Code":"+91"}}
-            # {"status":"success","data":[],"M-S-G":"No information found"}
-            if j.get("status") == "success" or j.get("status") is True:
-                data = j.get("data")
-                if isinstance(data, dict) and data.get("OwnerNumber"):
-                    # Normalize keys
-                    owner = data.get("OwnerNumber") or ""
-                    tg_id = data.get("TG -ID") or data.get("TG-ID") or data.get("tg_id") or ""
-                    cc = data.get("Country-Code") or "+91"
-                    merged = {
-                        "owner_number": owner,
-                        "tg_id": tg_id,
-                        "country_code": cc,
-                        "username": q,
-                        "mobile": owner,
-                        "telegram_id": tg_id,
-                    }
-                    return {"ok": True, "data": merged}
-                # empty list -> not found
-                if isinstance(data, list) and len(data)==0:
-                    return {"ok": False, "why": "notfound", "msg": f"Telegram {q} ka record nahi mila"}
-            # Some responses have status success but data empty
-            if isinstance(j.get("data"), list) and len(j.get("data",[]))==0:
-                return {"ok": False, "why": "notfound", "msg": f"Telegram {q} ka record nahi mila"}
-    except Exception as e:
-        # fallback to proxy if native fails
-        pass
-    # v2.6.2 — 18 Oct 2026: SUPABASE Demo route ZINDA hai (user ne URL di,
-    # khud test kiya: key=Demo telegramtonumber par ALLOWED — username aur
-    # numeric ID dono par asli data, ~8-10s). Pehle ye hub ke PROXY list me
-    # tha par native (sarkari) ka notfound usse kabhi try hi nahi hone deta
-    # tha. Ab order: sarkari -> supabase Demo -> t.me public -> honest error.
-    # v2.7.1: purana supabase host NXDOMAIN (project delete) — ab URL env se.
-    # Naya source mile toh sirf TG_SUPABASE_URL (+KEY) Render me daalo, code na chhuo.
-    try:
-        _sbase = os.environ.get("TG_SUPABASE_URL", "").strip().rstrip("/")
-        _skey = os.environ.get("TG_SUPABASE_KEY") or "Demo"
-        su = (f"{_sbase}?key={urllib.parse.quote(_skey)}&tool=telegramtonumber"
-              f"&term={urllib.parse.quote(q)}") if _sbase else ""
-        code2, body2 = http_get(su, timeout=25) if su else (None, "")
-        if code2 == 200 and body2:
-            j2 = json.loads(body2)
-            d2 = j2.get("data") if isinstance(j2, dict) else None
-            if isinstance(d2, dict) and (d2.get("phone_number") or d2.get("mobile")):
-                return {"ok": True, "data": {
-                    "mobile": d2.get("phone_number") or d2.get("mobile"),
-                    "owner_number": d2.get("phone_number") or d2.get("mobile"),
-                    "telegram_id": str(d2.get("telegram_id") or ""),
-                    "username": q,
-                    "country_code": d2.get("country") or "",
-                    "verification": d2.get("verification") or "",
-                    "source": "supabase-demo"}}
-    except Exception:
-        pass
-    # v2.6.3 — USER ORDER 18 Oct: TG tool me t.me PUBLIC-profile card ab NAHI
-    # dena. Chain: sarkari -> supabase Demo -> "data not found in any database".
-    return {"ok": False, "why": "notfound",
-            "msg": "Data not found in any database."}
 
 def _native_aadhaar2num(term: str) -> dict:
     """v2.6 — Aadhaar to mobile numbers (sarkariallupdates addhaar2num)."""
@@ -2060,32 +1797,6 @@ def _native_imei(term: str) -> dict:
     return {"ok": True, "source": "builtin-imei", "data": data}
 
 
-def _native_aadhaar2pan(term: str) -> dict:
-    """v2.23 — Aadhaar -> PAN (masked). Ronak ka free source (subho bhai ka fav tool 😄).
-    Env-slot: AADHAAR2PAN_API_URL — expiry pe naya URL daalo, code nahi chhoona."""
-    base = (os.environ.get("AADHAAR2PAN_API_URL")
-            or "https://api.sarkariallupdates.com/api?api=aadhaar2pan&key=30day&aadhaar2pan={term}").strip()
-    url = base.replace("{term}", urllib.parse.quote(str(term)))
-    try:
-        code, body = http_get(url, timeout=15)
-        j = json.loads(body) if (code == 200 and body) else None
-    except Exception:
-        j = None
-    if not isinstance(j, dict):
-        return {"ok": False, "why": "upstream", "msg": "aadhaar2pan source jawab nahi de raha"}
-    st = str(j.get("status") or "").lower()
-    pan = str(j.get("pan_number") or "").strip()
-    if st in ("success", "true") and pan:
-        return {"ok": True, "source": "sarkari-aadhaar2pan",
-                "data": {"aadhaar": str(j.get("aadhaar_number") or term),
-                         "pan": pan,
-                         "note": "PAN masked by source (aakhri 2 + pehla char dikhte hain)"}}
-    if st in ("not_found", "notfound") or "not_found" in str(j.get("message") or "").lower():
-        return {"ok": False, "why": "notfound", "msg": "Is Aadhaar ka PAN record nahi mila"}
-    return {"ok": False, "why": "upstream", "msg": str(j.get("message") or "source ne theek jawab nahi diya")[:80]}
-
-
-
 def _native_fastag(term: str) -> dict:
     """v2.21 — FASTag NETC (RC -> tags/bank/status) — siteapi wala hi source, gateway tool ab."""
     v = re.sub(r"\s+", "", str(term).upper())
@@ -2302,7 +2013,6 @@ NATIVE_HANDLERS = {
     "dns": _native_dns,
     "ip": _native_ip,
     "gst": _chain(("native", _native_gst), ("lakshitx", lambda t: _lx("gst", "gst", t))),
-    "pantogst": _native_pantogst,
     "ifsc": _native_ifsc,
     "pincode": _native_pincode,
     # ---- v2.15: comparison ke baad ka faisla (measurements comment me) ----
@@ -2315,8 +2025,6 @@ NATIVE_HANDLERS = {
                       ("vahanx", _vahanx_rc),
                       ("xtrace", lambda t: _xcall("vehicle_full", t))),
     "tginfo": _native_tginfo,
-    "tgnum": _chain(("apna-db", _ldb_tg),
-                    ("native", _native_tgnum)),
     # vehicletomobile: humara 6.7s par chalta hai, X_TRACE 10.6s + kuch gaadi 404 -> native primary
     "vehicletomobile": _chain(("native", _native_vehicletomobile),
                               ("provider", _env_provider("vehicletomobile")),
@@ -2363,7 +2071,6 @@ NATIVE_HANDLERS = {
     "upi": _chain(("lakshitx", lambda t: _lx("upi", "upi", t))),
     # v2.24.7: insta — NAYA TOOL (native GCF, koi middleman nahi)
     "insta": _native_insta,
-    "aadhaar2pan": _native_aadhaar2pan,
     "fastag": _native_fastag,
     "plate": _nf_plate,
     "aadhaarcheck": _nf_aadhaarcheck,
@@ -2388,11 +2095,11 @@ _CACHE_MAX = int(os.environ.get("CACHE_MAX", "8000"))
 _TTL_OK = int(os.environ.get("CACHE_TTL_OK", "3600"))
 _TTL_STATIC = int(os.environ.get("CACHE_TTL_STATIC", "21600"))
 _TTL_NO = int(os.environ.get("CACHE_TTL_FAIL", "300"))
-# v2.25.0 — flappy wrapper tools (pantogst): fail-cache sirf 45s
+# v2.26.4 — fail-cache (sirf infra baaki)
 _TTL_NO_FAST = 45
-_FAST_RETRY_TOOLS = ("pantogst",)
+_FAST_RETRY_TOOLS = ()
 _SWR_MAX = int(os.environ.get("CACHE_STALE_MAX", "86400"))
-_STATIC_TOOLS = {"ifsc", "pincode", "plate", "gstcheck", "aadhaarcheck", "gst", "pantogst"}
+_STATIC_TOOLS = {"ifsc", "pincode", "plate", "gstcheck", "aadhaarcheck", "gst"}
 _INFLIGHT: dict = {}
 _INFLIGHT_LOCK = threading.Lock()
 STATS: dict = {}
@@ -2401,7 +2108,6 @@ _SEM = threading.Semaphore(int(os.environ.get("MAX_CONCURRENT", "32")))
 
 # jin tools ka source owner ke control me nahi / mar chuka hai
 DEGRADED = {
-    # pantogst v2.23.1: provider(env GST_API_KEY) + sarkari pan2gst fallback — do sources
 
 }
 
@@ -2416,7 +2122,6 @@ _BUDGET = {
     "vehicle": int(os.environ.get("BUDGET_VEHICLE", "22000")),
     "num": int(os.environ.get("BUDGET_NUM", "15000")),
     "vehicletomobile": int(os.environ.get("BUDGET_VEHICLE_TO_MOBILE", "15000")),
-    "tgnum": int(os.environ.get("BUDGET_TGNUM", "8000")),
     "familyinfo": int(os.environ.get("BUDGET_FAMILYINFO", "22000")),
     "aadhaar2num": int(os.environ.get("BUDGET_AADHAAR2NUM", "15000")),
     "fastag": int(os.environ.get("BUDGET_FASTAG", "30000")),
@@ -2463,7 +2168,7 @@ def stats_snapshot() -> dict:
 def env_providers() -> dict:
     """kaun kaun se custom provider slots bhare hue hain (env se)."""
     out = {}
-    for t in ("num", "tc", "aadhaar", "aadhaar2num", "vehicle", "vehicletomobile", "familyinfo", "pantogst"):
+    for t in ("num", "tc", "aadhaar", "aadhaar2num", "vehicle", "vehicletomobile", "familyinfo"):
         u = (os.environ.get(f"{t.upper()}_API_URL") or "").strip()
         if u:
             out[t] = {"configured": True, "url_host": urllib.parse.urlsplit(u).hostname or "?"}
@@ -2473,7 +2178,7 @@ def env_providers() -> dict:
 def permanent_tools() -> dict:
     """kaun se tools 100% permanent hain (kisi third-party key ke bina)."""
     perm = ["ip", "ifsc", "pincode", "gst", "plate", "aadhaarcheck", "gstcheck",
-            "webextract", "phonebiz", "tgnum", "num", "aadhaar2num"]
+            "webextract", "phonebiz", "num", "aadhaar2num"]
     return {"permanent": perm, "count": len(perm),
             "provider_dependent": [t for t in TOOLS if t not in perm]}
 

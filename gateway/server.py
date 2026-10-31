@@ -409,7 +409,6 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0a1226;border:1px sol
 <option value="dns">dns — domain ke A/MX/TXT/NS records</option>
 <option value="tginfo">tginfo — Telegram user/channel/group live-info</option>
 <option value="vehicle">vehicle — sirf RC/VEHICLE</option>
-<option value="tgnum">tgnum — sirf TELEGRAM NUMBER</option>
 <option value="phonebiz">phonebiz — Phone → Business Info</option>
 <option value="num+familyinfo">num+familyinfo — 2 tools (Number + Family)</option>
 <option value="num+familyinfo+vehicle">num+familyinfo+vehicle — 3 tools</option>
@@ -519,13 +518,13 @@ function genKey(){
   document.getElementById('f_key').value=s;
 }
 function getSampleTerm(tool){
-  const samples={num:'9876543210',familyinfo:'401635555849',aadhar:'401635555849',gst:'19BOKPS7056D1ZI',ip:'8.8.8.8',ifsc:'SBIN0000001',pincode:'110001',paknum:'03001234567',vehicle:'BR01AB1234',tgnum:'@username',pakvehicle:'ABC123',tower:'9876543210',fastag:'RJ14CV0002',phonebiz:'9985814792',weather:'Hajipur',dns:'google.com',tginfo:'@durov'};
+  const samples={num:'9876543210',familyinfo:'401635555849',aadhar:'401635555849',gst:'19BOKPS7056D1ZI',ip:'8.8.8.8',ifsc:'SBIN0000001',pincode:'110001',paknum:'03001234567',vehicle:'BR01AB1234',pakvehicle:'ABC123',tower:'9876543210',fastag:'RJ14CV0002',phonebiz:'9985814792',weather:'Hajipur',dns:'google.com',tginfo:'@durov'};
   return samples[tool]||'VALUE';
 }
 function buildReadyUrls(key, toolsRaw){
   const host=HOST;
   let tools=[];
-  if(!toolsRaw || toolsRaw==='*' || toolsRaw==='all'){tools=['num','familyinfo','aadhar','gst','ip','ifsc','pincode','paknum','vehicle','tgnum','pakvehicle','tower','fastag','phonebiz','weather','dns'];}
+  if(!toolsRaw || toolsRaw==='*' || toolsRaw==='all'){tools=['num','familyinfo','aadhar','gst','ip','ifsc','pincode','paknum','vehicle','pakvehicle','tower','fastag','phonebiz','weather','dns'];}
   else{tools=toolsRaw.split(/[+|,;]+/).map(t=>t.trim()).filter(Boolean);}
   const box=document.getElementById('readyBox');
   const cont=document.getElementById('readyUrls');
@@ -659,7 +658,7 @@ class H(BaseHTTPRequestHandler):
         _ALIASES = {
             "/num_info": "num", "/aadhar_info": "aadhaar2num", "/aadhaar_info": "aadhaar2num",
             "/family_info": "familyinfo", "/rc_num": "vehicletomobile",
-            "/truecaller_info": "tc", "/tg_info": "tgnum", "/vehicle_info": "vehicle",
+            "/truecaller_info": "tc", "/vehicle_info": "vehicle",
             "/fastag_info": "fastag", "/imei_info": "imei",
            "/ip_info": "ip", "/web_extract": "webextract", "/weather_info": "weather", "/mausam_info": "weather", "/dns_info": "dns", "/tguser_info": "tginfo", "/tggroup_info": "tginfo", "/channel_info": "tginfo",
             "/phonebiz_info": "phonebiz",
@@ -915,7 +914,7 @@ class H(BaseHTTPRequestHandler):
                             _d["fast_numbers"]=(fast.get("data") or {}).get("mobile")
                         fin(rich); return
                     fin(fast if (isinstance(fast,dict) and fast.get("ok")) else {"ok":False,"why":"notfound","msg":"No records found for this reference."}); return
-                if tool in ("num","tc","tgnum","familyinfo","vehicletomobile","aadhaar2num","phonebiz","webextract","ip"):
+                if tool in ("num","tc","familyinfo","vehicletomobile","aadhaar2num","phonebiz","webextract","ip"):
                     fin(U.lookup(tool,term)); return
                 fin({"ok":False,"why":"unknown_tool","msg":"Unknown module."})
             except Exception:

@@ -1278,7 +1278,6 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     txt += "📱 <b>NUMBER INFO</b> — <code>/numinfo 7857843092</code>\n\n"
     txt += "📇 <b>TRUE CALLER LOOKUP</b> — <code>/tc 9492915392</code>\n"
     txt += "   ↳ naam, carrier, circle, IMEI/IP/MAC, locations\n\n"
-    txt += "🆔 <b>TELEGRAM NUMBER</b> — <code>/tgnum @username</code>\n\n"
     txt += "👪 <b>FAMILY INFO</b> — <code>/family 401635555849</code>\n\n"
     txt += "🚗 <b>RC + CHALLAN</b> — <code>/rc BR30AR0802</code>\n"
     txt += "   ↳ E-Challan details bhi usi card mein\n\n"
@@ -1466,9 +1465,9 @@ async def family_info_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await status.edit_text(NF2, parse_mode=ParseMode.HTML)
 
 # ========== v2.6 — BOT-1 PORT TOOLS (RC, V2M, A2N, RESULT) ==========
-UAPI_KIND = {"rc": "rc", "v2m": "vehicletomobile", "a2n": "aadhaar2num", "dl": "dl", "fastag": "fastag", "imei": "imei", "a2p": "aadhaar2pan", "ptg": "pantogst", "gst": "gst"}
-UAPI_PROMPT_KEY = {"rc": "rc", "v2m": "vehicletomobile", "a2n": "aadhaar2num", "dl": "dl", "fastag": "fastag", "imei": "imei", "a2p": "aadhaar2pan", "ptg": "pantogst", "gst": "gst"}
-UAPI_PAID = {"rc", "v2m", "a2n", "dl", "fastag", "imei", "a2p", "ptg", "gst"}
+UAPI_KIND = {"rc": "rc", "v2m": "vehicletomobile", "a2n": "aadhaar2num", "dl": "dl", "fastag": "fastag", "imei": "imei", "gst": "gst"}
+UAPI_PROMPT_KEY = {"rc": "rc", "v2m": "vehicletomobile", "a2n": "aadhaar2num", "dl": "dl", "fastag": "fastag", "imei": "imei", "gst": "gst"}
+UAPI_PAID = {"rc", "v2m", "a2n", "dl", "fastag", "imei", "gst"}
 
 async def uapi_tool_cmd(mode: str, update: Update, context: ContextTypes.DEFAULT_TYPE):
     """RC / VEHICLE TO NUMBER / AADHAAR TO NUMBER — bot-1 se port."""
@@ -1543,8 +1542,6 @@ async def a2n_cmd(update, context):       await uapi_tool_cmd("a2n", update, con
 async def dl_cmd(update, context):        await uapi_tool_cmd("dl", update, context)
 async def fastag_cmd(update, context):    await uapi_tool_cmd("fastag", update, context)
 async def imei_cmd(update, context):      await uapi_tool_cmd("imei", update, context)
-async def a2p_cmd(update, context):       await uapi_tool_cmd("a2p", update, context)
-async def ptg_cmd(update, context):       await uapi_tool_cmd("ptg", update, context)
 async def gst_cmd(update, context):       await uapi_tool_cmd("gst", update, context)
 
 async def result_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1614,91 +1611,6 @@ async def bseb_step2(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_tex
         context.user_data.pop("rs_exam", None)
     except:
         pass
-
-# ========== TG TOOLS ==========
-async def tg_number_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    _pre = await _instant_wait(update)   # v2.18.2: click -> INSTANT wait
-    if not await check_force_join(update, context):
-        await _clear_pre(_pre)
-        return
-    uid = update.effective_user.id
-    can_use, creds, user = can_use_tool(uid, "tg")   # v2.5.5: TG ka ALAG pool
-    if not can_use:
-        await _clear_pre(_pre)
-        from modules.payments import UPI_ID
-        import html as _h
-        await update.message.reply_text(
-            f"🔒 <b>Aapke {TG_CREDITS} free TG credits khatam ho gaye</b>\n\n"
-            f"Har naye user ko <b>{TG_CREDITS} free TG credits</b> milte hain —\n"
-            f"aapne saare use kar liye. 👏\n\n"
-            f"👑 <b>Premium lo</b> — TELEGRAM NUMBER + baaki saare tools <b>unlimited</b>!\n"
-            f"💎 /premium se plans dekho\n\n"
-            f"💳 UPI: <code>{_h.escape(UPI_ID)}</code>",
-            parse_mode=ParseMode.HTML)
-        return
-    if not context.args:
-        await _clear_pre(_pre)
-        await update.message.reply_text(
-            "❌ <b>Use:</b> <code>/tginfo @username</code>\n\n"
-            "📌 Example:\n"
-            "<code>/tginfo @durov</code>\n"
-            "<code>/tgnum @username</code>",
-            parse_mode=ParseMode.HTML
-        )
-        return
-
-    username = context.args[0]
-    status = _pre or await update.message.reply_text(WAIT2, parse_mode=ParseMode.HTML)
-
-    _t0 = time.time()
-    try:
-        result = await _run_with_typing(update, context, asyncio.to_thread(lookup_tg, username))
-        try:
-            print(f"[TIMING] tg {int((time.time()-_t0)*1000)}ms ok={result.get('ok')} cached={result.get('cached', False)}", flush=True)
-        except Exception:
-            pass
-        
-        if not result.get("ok"):
-            # v2.5.1 FIX: pehle FAIL hone par bhi credit kat jata tha (bug) aur
-            # hamesha wahi ek jhootha line dikhta tha. Ab asli error dikhta hai
-            # aur credit SIRF success par katta hai.
-            await status.edit_text(NF2, parse_mode=ParseMode.HTML)
-            return
-
-        data = result.get("data", {}) if isinstance(result.get("data"), dict) else {}
-        ms = result.get("ms", 0)
-        # v2.5.4 (USER ORDER): public-profile/t.me data ab card NAHI banta —
-        # number na mile to sirf "data not found in any database".
-        _mobile = str(data.get("mobile") or data.get("owner_number") or data.get("phone_number") or "").strip()
-        if not _mobile or data.get("source") == "t.me-public":
-            await status.edit_text(NF2, parse_mode=ParseMode.HTML)
-            return
-        _tgid = str(data.get("telegram_id") or data.get("tg_id") or "").strip()
-        _uname = str(data.get("username") or result.get("term") or "").strip().lstrip("@")
-        _ctry = str(data.get("country_code") or data.get("country") or "").strip()
-        _L = [f"🆩 <b>TELEGRAM NUMBER — @{_uname}</b>",
-              "━━━━━━━━━━━━━━━━━━━━━━",
-              "",
-              f"📱 Number : <code>{_mobile}</code>"]
-        if _tgid:
-            _L.append(f"🆩 Telegram ID : <code>{_tgid}</code>")
-        if _uname:
-            _L.append(f"👤 Username : @{_uname}")
-        if _ctry:
-            _L.append(f"🌍 Country : {_ctry}")
-        _L += ["", f"⚡ <b>Response:</b> {ms}ms",
-               "🔥 <b>Powered by @ANONYMOUS_XH</b>"]
-        txt = "\n".join(_L)
-        try:
-            left = spend_tg_credits(uid, 1)   # v2.5.5: TG pool se kato
-            txt += f"\n{credits_line(uid)}"
-        except:
-            pass
-        await status.edit_text(txt[:4000], parse_mode=ParseMode.HTML)
-
-    except Exception as e:
-        await status.edit_text(NF2, parse_mode=ParseMode.HTML)
-
 
 # ========== TELEGRAM SCRAPER ==========
 # ========== INSTAGRAM ==========
@@ -3088,7 +3000,6 @@ async def main_async():
 
     # TG Tools - KEEP
     app.add_handler(CommandHandler("tginfo", tg_number_cmd))
-    app.add_handler(CommandHandler("tgnum", tg_number_cmd))
     app.add_handler(CommandHandler("telegram", tg_number_cmd))
     app.add_handler(CommandHandler(["phonebiz", "biz"], phonebiz_cmd))
     app.add_handler(CommandHandler(["business", "landline"], phonebiz_cmd))
@@ -3102,8 +3013,6 @@ async def main_async():
     app.add_handler(CommandHandler(["dl", "driving", "licence"], dl_cmd))
     app.add_handler(CommandHandler(["fastag", "tag"], fastag_cmd))
     app.add_handler(CommandHandler("imei", imei_cmd))
-    app.add_handler(CommandHandler(["a2p", "aadhaar2pan"], a2p_cmd))
-    app.add_handler(CommandHandler(["ptg", "pantogst", "pan2gst"], ptg_cmd))
     app.add_handler(CommandHandler(["gst", "gstin"], gst_cmd))
     app.add_handler(CommandHandler("result", result_cmd))
     app.add_handler(CommandHandler("bseb", result_cmd))
