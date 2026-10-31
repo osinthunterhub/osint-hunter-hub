@@ -34,7 +34,7 @@ from typing import Any, Dict
 from modules.cardstyle import box, field, footer, sep, subhead
 from .fast_cache import get_session, with_cache
 
-API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-v2.onrender.com/api").strip()
+API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-we9m.onrender.com/api").strip()
 API_KEY = (os.getenv("MYNUM_API_KEY") or os.getenv("GATEWAY_KEY") or "").strip()
 TIMEOUT = (5, int(os.getenv("TRUECALLER_TIMEOUT", "30")))
 

@@ -12,7 +12,7 @@ from .fast_cache import get_session, api_cache_get, api_cache_set
 
 from modules.cardstyle import box, field, sep, footer
 
-API_URL = os.getenv("FAMINFO_API_URL", "https://utility-api-v2.onrender.com/api").strip()
+API_URL = os.getenv("FAMINFO_API_URL", "https://utility-api-we9m.onrender.com/api").strip()
 API_KEY = os.getenv("FAMINFO_API_KEY", "").strip()
 TIMEOUT = (5, 20)  # (connect5s, read20s) — SPEED v2.12.2
 

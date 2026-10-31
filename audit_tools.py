@@ -4,11 +4,11 @@ import os, sys, time, json, traceback
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 KEY = os.environ["OWNER"]
-os.environ["MYNUM_API_URL"] = "https://utility-api-v2.onrender.com/api"
+os.environ["MYNUM_API_URL"] = "https://utility-api-we9m.onrender.com/api"
 os.environ["MYNUM_API_KEY"] = KEY
-os.environ["FAMINFO_API_URL"] = "https://utility-api-v2.onrender.com/api"
+os.environ["FAMINFO_API_URL"] = "https://utility-api-we9m.onrender.com/api"
 os.environ["FAMINFO_API_KEY"] = KEY
-os.environ["UPIINFO_API_URL"] = "https://utility-api-v2.onrender.com/api"
+os.environ["UPIINFO_API_URL"] = "https://utility-api-we9m.onrender.com/api"
 os.environ["UPIINFO_API_KEY"] = KEY
 os.environ.setdefault("BOT_TOKEN", "123:abc")
 os.environ.setdefault("ADMIN_ID", "1")

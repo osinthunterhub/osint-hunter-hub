@@ -10,7 +10,7 @@ import fasthttp as requests
 from typing import Dict, Any
 from .fast_cache import get_session, api_cache_get, api_cache_set
 
-API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-v2.onrender.com/api")
+API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-we9m.onrender.com/api")
 API_KEY = os.getenv("MYNUM_API_KEY", "")
 TIMEOUT = (4, int(os.getenv("MYNUM_API_TIMEOUT", "20")))  # v2.17: gateway ab fast hai; 25s waste hataaya
 

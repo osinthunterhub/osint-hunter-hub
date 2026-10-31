@@ -7,6 +7,7 @@ import json
 import os
 import re
 import secrets
+import concurrent.futures
 import threading
 import time
 import urllib.request
@@ -15,6 +16,9 @@ from urllib.parse import urlparse, parse_qs
 
 import upstreams as U
 import signed_keys as SK
+
+# v2.24.4 SPEED: numpro/aadhaarpro ka SHARED race-pool (pehle per-request threads leak ho rahe the)
+_RACE_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=int(os.environ.get("RACE_WORKERS") or 8), thread_name_prefix="race")
 
 PORT = int(os.environ.get("PORT", "8080"))
 START = time.time()
@@ -247,7 +251,9 @@ def _inc_usage(label: str):
 def _keepawake():
     # SPEED v2.12.2: SELF-ping Render spin-down NAHI rokta (self traffic ignored).
     # EXTERNAL peer = bot ka /health — bot kabhi na soye (Actions ping bhi hai).
-    url=(os.environ.get("KEEP_PEER_URL") or "https://osint-hunter-hub-bot.onrender.com/health").strip()
+    # v2.24.4 FIX: default peer ab LIVE bot URL (purana 'osint-hunter-hub-bot.onrender.com' 404 de raha tha
+    # — matlab keep-awake chain TOOTI thi aur dono services free-tier spin-down kha rahe the)
+    url=(os.environ.get("KEEP_PEER_URL") or "https://osint-hunter-hub-bot-zm5u.onrender.com/health").strip()
     if os.environ.get("KEEPAWAKE","on")=="off": return
     time.sleep(60)
     while True:
@@ -887,14 +893,15 @@ class H(BaseHTTPRequestHandler):
                         "active_tags":_j.get("active_count"),"banks":sorted({t.get('bank_name') for t in (_j.get('tags') or []) if t.get('bank_name')}),
                         "tags_detail":_tags[:12]}}); return
                 if tool in ("numpro","aadhaarpro"):
+                    # v2.24.4 SPEED+LEAK-FIX: pehle har request par 2 naye threads + 0.05s busy-wait
+                    # tha (CPU burn + timeout par thread leak). Ab SHARED pool + Future.result(timeout):
+                    # event-driven, threads pool me wapas, koi leak nahi.
                     _pairs={"numpro":[("num",15),("aadhaar2num",12)],"aadhaarpro":[("aadhaar",18),("aadhaar2num",12)]}[tool]
+                    _futs={tt:_RACE_POOL.submit(U.lookup,tt,term) for tt,_tmo in _pairs}
                     _box={}
-                    def _srun(tt): _box[tt]=U.lookup(tt,term)
-                    _ths=[threading.Thread(target=_srun,args=(tt,),daemon=True) for tt,_tmo in _pairs]
-                    [_t.start() for _t in _ths]
-                    for _tt,_tmo in _pairs: time.sleep(0); time.sleep(0)
-                    _deadline=time.time()+max(tmo for _,tmo in _pairs)/1000.0
-                    while time.time()<_deadline and len(_box)<len(_pairs): time.sleep(0.05)
+                    for tt,_tmo in _pairs:
+                        try: _box[tt]=_futs[tt].result(timeout=_tmo)
+                        except Exception: _box[tt]=None
                     rich=_box.get(_pairs[0][0]); fast=_box.get(_pairs[1][0])
                     if tool=="numpro":
                         if isinstance(rich,dict) and rich.get("ok"):

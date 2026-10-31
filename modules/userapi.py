@@ -161,7 +161,7 @@ UA_HEADERS = {
 # v2.17: ye supabase host MAR chuka hai (NXDOMAIN / "unknown tool").
 # Pehle /rc har baar isi par jaata tha -> tool toota hua tha + 5s waste.
 # Ab default = owner ka apna gateway.
-_BUILTIN_URL = (os.environ.get("RC_API_URL") or "https://utility-api-v2.onrender.com/api").strip()
+_BUILTIN_URL = (os.environ.get("RC_API_URL") or "https://utility-api-we9m.onrender.com/api").strip()
 _BUILTIN_KEY = (os.environ.get("RC_API_KEY") or os.environ.get("GATEWAY_KEY") or os.environ.get("MYNUM_API_KEY") or "").strip()
 
 TOOLS = {
@@ -788,7 +788,7 @@ def _cget_k(kind, clean):
     return None
 
 
-_GATEWAY_BASE = (os.environ.get("GATEWAY_URL") or os.environ.get("UTILITY_API_URL") or "https://utility-api-v2.onrender.com").strip().rstrip("/")
+_GATEWAY_BASE = (os.environ.get("GATEWAY_URL") or os.environ.get("UTILITY_API_URL") or "https://utility-api-we9m.onrender.com").strip().rstrip("/")
 # v2.17 SECURITY: pehle yahan owner ki ASLI gateway key hardcoded thi aur repo
 # PUBLIC hai -> koi bhi copy kar sakta tha. Ab sirf env se (Render dashboard).
 _GATEWAY_KEY = (os.environ.get("GATEWAY_KEY") or os.environ.get("MYNUM_API_KEY")

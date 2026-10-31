@@ -10,7 +10,7 @@ from modules.cardstyle import box, field, sep, footer
 from .fast_cache import with_cache
 from typing import Dict, Any
 
-API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-v2.onrender.com/api")
+API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-we9m.onrender.com/api")
 API_KEY = os.getenv("MYNUM_API_KEY", "")
 TIMEOUT = 25
 

@@ -5,7 +5,7 @@
 Ye tools USER ke APNE gateway (utility-api) par chalte hain:
 phonebiz = owner ka local 1.72M index · echallan = RC+CHALLAN ke andar merge.
 
-    GET https://utility-api-v2.onrender.com/api
+    GET https://utility-api-we9m.onrender.com/api
         ?key=<MYNUM_API_KEY>&tool=phonebiz|challan&term=<input>
 
 Architectural rule (USER ORDER, 23 Oct 2026):
@@ -32,7 +32,7 @@ from typing import Any, Dict, List
 from modules.cardstyle import box, field, sep, footer, subhead
 from .fast_cache import with_cache, get_session
 
-API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-v2.onrender.com/api").strip()
+API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-we9m.onrender.com/api").strip()
 API_KEY = os.getenv("MYNUM_API_KEY", "").strip()
 TIMEOUT = int(os.getenv("GW_TIMEOUT", "20"))  # v2.17
 

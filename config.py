@@ -35,7 +35,7 @@ OWNER_USERNAME = os.getenv("OWNER_USERNAME", "@ANONYMOUS_XH").strip()   # v2.6: 
 BRAND_TAG = os.getenv("BRAND_TAG", "@ANONYMOUS_XH").strip()
 
 # APIs
-MYNUM_API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-v2.onrender.com/api").strip()
+MYNUM_API_URL = os.getenv("MYNUM_API_URL", "https://utility-api-we9m.onrender.com/api").strip()
 # v2.0 SECURITY: API key sirf env se (public repo me hardcoded nahi)
 MYNUM_API_KEY = os.getenv("MYNUM_API_KEY", "").strip()
 

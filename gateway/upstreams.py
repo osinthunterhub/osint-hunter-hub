@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.23.1"
+VERSION = "2.24.4"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -44,6 +44,78 @@ SARKARI_API_BASE = os.environ.get(
     "https://api.sarkariallupdates.com/api",
 ).strip().rstrip("/")
 SARKARI_API_KEY = (os.environ.get("SARKARI_API_KEY") or os.environ.get("KEY_SARKARI") or "30day").strip()
+
+# v2.4.0 — ALLPRINTHub MIRROR FALLBACK (sarkariallupdates 509 hone par ye zinda rehta hai)
+APH_API_BASE = os.environ.get("APH_API_URL", "https://api.allprinthub.in/api").strip().rstrip("/")
+APH_API_KEY = (os.environ.get("APH_API_KEY") or "30day").strip()
+
+def _aph_get(ep: str, params: str, timeout: float = 10.0):
+    """allprinthub mirror call — dict ya None. Fallback-only (primary pehle)."""
+    try:
+        url = f"{APH_API_BASE}?={ep}&key={urllib.parse.quote(APH_API_KEY)}&{params}"
+        code, body = http_get(url, timeout=timeout)
+        if code != 200 or not body:
+            return None
+        return json.loads(body)
+    except Exception:
+        return None
+
+# v2.4.2 — APH-FIRST mode: sarkariallupdates hang ho raha hai (509 se bhi bad),
+# isliye allprinthub mirror PEHLE (6-8s), sarkari fallback. Env APH_FIRST=0 se revert.
+def _aph_first() -> bool:
+    return (os.environ.get("APH_FIRST", "1").strip().lower() not in ("0", "false", "off", "no"))
+
+def _aph_v2n(term):
+    aj = _aph_get("vehicle_to_number", f"xr={urllib.parse.quote(term)}", timeout=7)
+    if isinstance(aj, dict) and aj.get("success") and aj.get("mobile_number"):
+        return {"ok": True, "data": {
+            "registration_number": aj.get("registration_number") or term,
+            "mobile_number": aj.get("mobile_number") or "",
+            "mobile": aj.get("mobile_number") or ""}}
+    return None
+
+
+def _aph_a2num(term):
+    aj = _aph_get("addhaar2num", f"num={urllib.parse.quote(term)}", timeout=7)
+    if isinstance(aj, dict) and aj.get("status") == "success" and isinstance(aj.get("data"), list) and aj.get("data"):
+        data_list = aj["data"][:5]
+        merged = {"aadhaar": term, "count": aj.get("count") or len(data_list),
+                  "records": data_list, "primary": data_list[0] if data_list else {}}
+        if data_list:
+            first = data_list[0]
+            merged["mobile"] = first.get("phoneNumber") or first.get("mobile") or ""
+            merged["name"] = first.get("name") or ""
+            merged["address"] = first.get("address") or ""
+        return {"ok": True, "data": merged}
+    return None
+
+
+def _aph_family(term):
+    aj = _aph_get("family", f"q={urllib.parse.quote(str(term).strip())}", timeout=8)
+    if isinstance(aj, dict) and (aj.get("status") is True or aj.get("status") == "success"):
+        d0 = aj.get("data")
+        mem = d0.get("members") if isinstance(d0, dict) else (d0 if isinstance(d0, list) else None)
+        if mem:
+            norm = []
+            for m in mem:
+                if isinstance(m, dict):
+                    norm.append({"name": m.get("name") or "",
+                                 "relation": m.get("relation") or m.get("relation_name") or "",
+                                 "member_id": m.get("member_id") or m.get("member_id_no") or "",
+                                 "aadhaar_linked": m.get("aadhaar_linked") or m.get("aadhaar") or ""})
+            if norm:
+                dd = d0 if isinstance(d0, dict) else {}
+                return {"ok": True, "data": {
+                    "head_of_family": dd.get("head_of_family") or (norm[0].get("name") or ""),
+                    "ration_card_number": dd.get("ration_card_number") or "",
+                    "scheme": dd.get("scheme") or "", "state": dd.get("state") or "",
+                    "district": dd.get("district") or "", "fps_id": dd.get("fps_id") or "",
+                    "total_members": dd.get("total_members") or len(norm),
+                    "members": norm, "source_note": "public ledger (mirror)"}}
+    return None
+
+
+
 
 # v2.11 — E-Challan source (env se kabhi bhi swap ho sakta hai).
 # tower/fastag vendor envs PERMANENTLY DELETED (tools hi nahi rahe).
@@ -637,6 +709,10 @@ def _native_tgnum(term: str) -> dict:
 
 def _native_aadhaar2num(term: str) -> dict:
     """v2.6 — Aadhaar to mobile numbers (sarkariallupdates addhaar2num)."""
+    if _aph_first():
+        _r = _aph_a2num(term)
+        if _r and _r.get("ok"):
+            return _r
     try:
         url = f"{SARKARI_API_BASE}?=addhaar2num&key={urllib.parse.quote(SARKARI_API_KEY)}&q={urllib.parse.quote(term)}"
         code, body = http_get(url, timeout=20)
@@ -669,11 +745,34 @@ def _native_aadhaar2num(term: str) -> dict:
                 return {"ok": False, "why": "notfound", "msg": "Aadhaar par koi mobile nahi mila"}
     except Exception:
         pass
+    # v2.4.0 APH mirror fallback (same response shape family)
+    aj = _aph_get("addhaar2num", f"num={urllib.parse.quote(term)}", timeout=8)
+    if isinstance(aj, dict):
+        if aj.get("status") == "success" and isinstance(aj.get("data"), list) and aj.get("data"):
+            data_list = aj["data"][:5]
+            merged = {
+                "aadhaar": term,
+                "count": aj.get("count") or len(data_list),
+                "records": data_list,
+                "primary": data_list[0] if data_list else {},
+            }
+            if data_list:
+                first = data_list[0]
+                merged["mobile"] = first.get("phoneNumber") or first.get("mobile") or ""
+                merged["name"] = first.get("name") or ""
+                merged["address"] = first.get("address") or ""
+            return {"ok": True, "data": merged}
+        if aj.get("status") in ("not_found", False):
+            return {"ok": False, "why": "notfound", "msg": "Aadhaar par koi mobile nahi mila"}
     return {"ok": False, "why": "notfound", "msg": "Aadhaar par koi mobile nahi mila"}
 
 
 def _native_vehicletomobile(term: str) -> dict:
     """v2.6 — Vehicle number to mobile (sarkariallupdates vehicle_to_number)."""
+    if _aph_first():
+        _r = _aph_v2n(term)
+        if _r and _r.get("ok"):
+            return _r
     try:
         url = f"{SARKARI_API_BASE}?=vehicle_to_number&key={urllib.parse.quote(SARKARI_API_KEY)}&xr={urllib.parse.quote(term)}"
         code, body = http_get(url, timeout=7)   # v2.18.2: dead source 7s me pakdo (pehle 20s!)
@@ -695,6 +794,15 @@ def _native_vehicletomobile(term: str) -> dict:
                 return {"ok": False, "why": "notfound", "msg": "Vehicle se mobile nahi mila"}
     except Exception:
         pass
+    # v2.4.0 APH mirror fallback
+    aj = _aph_get("vehicle_to_number", f"xr={urllib.parse.quote(term)}", timeout=8)
+    if isinstance(aj, dict) and aj.get("success") and aj.get("mobile_number"):
+        return {"ok": True, "data": {
+            "registration_number": aj.get("registration_number") or term,
+            "mobile_number": aj.get("mobile_number") or "",
+            "mobile": aj.get("mobile_number") or "",
+            "source_note": "mirror",
+        }}
     return {"ok": False, "why": "notfound", "msg": "Vehicle se mobile nahi mila"}
 
 
@@ -898,12 +1006,44 @@ def _native_num(term: str) -> dict:
     q = urllib.parse.quote(term)
     url = f"{SARKARI_API_BASE}?=num&key={urllib.parse.quote(SARKARI_API_KEY)}&q={q}&xr={q}&num={q}&term={q}"
     code, body = http_get(url, timeout=5)          # v2.18.2: mara hua source 5s me pakdo, 9s nahi
-    if code != 200 or not body:
+
+    if _aph_first():
+        aj0 = _aph_get("num", f"num={q}", timeout=7)
+        if isinstance(aj0, dict) and aj0.get("status") == "success" and isinstance(aj0.get("data"), list) and aj0.get("data"):
+            j0 = aj0
+            lst0 = j0["data"]
+
+            def _s(v):
+                t = str(v if v is not None else "").strip()
+                return "" if t.lower() in ("n/a", "na", "none", "null", "-", "0") else t
+
+            f0 = lst0[0]
+            d0 = {
+                "owner_name": _s(f0.get("name")),
+                "father_name": _s(f0.get("fname")),
+                "mobile_no": _s(f0.get("mobile")),
+                "alt_mobile": _s(f0.get("alt")),
+                "address": _s(f0.get("address")),
+                "circle": _s(f0.get("circle")),
+                "aadhar_card_no": _s(f0.get("id")),
+            }
+            for i, r0 in enumerate(lst0[1:6], 1):
+                if isinstance(r0, dict) and _s(r0.get("name")):
+                    d0[f"owner_name_{i}"] = _s(r0.get("name"))
+            return {"ok": True, "data": d0, "source": "aph-mirror"}
+    j = None
+    if code == 200 and body:
+        try:
+            j = json.loads(body)
+        except Exception:
+            j = None
+    if not (isinstance(j, dict) and isinstance(j.get("data"), list) and j.get("data")):
+        # v2.4.0 APH mirror fallback (sarkari 509/transport-fail par)
+        aj = _aph_get("num", f"num={q}", timeout=8)
+        if isinstance(aj, dict) and aj.get("status") == "success" and isinstance(aj.get("data"), list) and aj.get("data"):
+            j = aj
+    if j is None:
         return {"ok": False, "why": "upstream", "msg": "number source abhi jawab nahi de raha — thodi der baad try karo"}
-    try:
-        j = json.loads(body)
-    except Exception:
-        return {"ok": False, "why": "bad_json", "msg": "number source ne theek jawab nahi diya"}
     lst = j.get("data") if isinstance(j, dict) else None
     if not isinstance(lst, list) or not lst or not isinstance(lst[0], dict):
         return {"ok": False, "why": "notfound", "msg": "is number ka record kisi database me nahi mila"}
@@ -942,15 +1082,52 @@ def _native_familyinfo(term: str) -> dict:
     """v2.19.1 — familyinfo ab sarkariallupdates ?=family (live, instant local cache).
     Pehle ?=ration tha jo 20-25s me timeout ho gaya (source ne endpoint badla).
     Output flat card + members list (naam, relation, member_id, aadhaar_linked)."""
+
+    if _aph_first():
+        _r = _aph_family(term)
+        if _r and _r.get("ok"):
+            return _r
     q = urllib.parse.quote(str(term).strip())
     url = f"{SARKARI_API_BASE}?=family&key={urllib.parse.quote(SARKARI_API_KEY)}&q={q}&xr={q}&term={q}"
-    code, body = http_get(url, timeout=12)
-    if code != 200 or not body:
+    code, body = http_get(url, timeout=6)   # v2.4.1 fail-fast (509 turant; 12s waste tha)
+    j = None
+    if code == 200 and body:
+        try:
+            j = json.loads(body)
+        except Exception:
+            j = None
+    # v2.4.0 APH mirror fallback (family) — tolerant shape mapping
+    if not (isinstance(j, dict) and isinstance(j.get("data"), (dict, list))):
+        aj = _aph_get("family", f"q={urllib.parse.quote(str(term).strip())}", timeout=8)
+        if isinstance(aj, dict) and (aj.get("status") is True or aj.get("status") == "success"):
+            d0 = aj.get("data")
+            mem = d0.get("members") if isinstance(d0, dict) else (d0 if isinstance(d0, list) else None)
+            if mem:
+                norm = []
+                for m in mem:
+                    if not isinstance(m, dict):
+                        continue
+                    norm.append({
+                        "name": m.get("name") or "",
+                        "relation": m.get("relation") or m.get("relation_name") or "",
+                        "member_id": m.get("member_id") or m.get("member_id_no") or "",
+                        "aadhaar_linked": m.get("aadhaar_linked") or m.get("aadhaar") or "",
+                    })
+                if norm:
+                    dd = d0 if isinstance(d0, dict) else {}
+                    j = {"data": {
+                        "head_of_family": dd.get("head_of_family") or (norm[0].get("name") or ""),
+                        "ration_card_number": dd.get("ration_card_number") or "",
+                        "scheme": dd.get("scheme") or "",
+                        "state": dd.get("state") or "",
+                        "district": dd.get("district") or "",
+                        "fps_id": dd.get("fps_id") or "",
+                        "total_members": dd.get("total_members") or len(norm),
+                        "members": norm,
+                        "source_note": "public ledger (mirror)",
+                    }}
+    if j is None:
         return {"ok": False, "why": "upstream", "msg": "family source abhi jawab nahi de raha — thodi der baad try karo"}
-    try:
-        j = json.loads(body)
-    except Exception:
-        return {"ok": False, "why": "bad_json", "msg": "family source ne theek jawab nahi diya"}
     d = j.get("data") if isinstance(j, dict) else None
     if not isinstance(d, dict) or not d.get("members"):
         return {"ok": False, "why": "notfound", "msg": "Is reference par koi family record nahi mila."}
@@ -1443,8 +1620,11 @@ def _chain(*providers):
         # 2) hedge window ke andar success? warna agla bhi start karo
         idx = 1
         while not done.is_set() and idx < len(chain):
-            while time.time() < deadline and not done.is_set():
-                time.sleep(0.02)
+            # v2.24.4 SPEED: 0.02s poll-loop HATAO — event-wait (done.set() par turant uthta hai,
+            # warna deadline tak exactly ek baar block; CPU zero, latency zero)
+            _left = deadline - time.time()
+            if _left > 0:
+                done.wait(_left)
             if done.is_set():
                 break
             n, fn = chain[idx]
@@ -1459,7 +1639,8 @@ def _chain(*providers):
             with lock:
                 if len(results) >= len(started) and idx >= len(chain):
                     break
-            time.sleep(0.02)
+            # v2.24.4 SPEED: yahan bhi event-wait (pehle 0.02s sleep-spin tha)
+            done.wait(min(0.2, max(0.0, end - time.time())))
 
         with lock:
             ok = [(n, r) for n, r in results.items() if r.get("ok")]

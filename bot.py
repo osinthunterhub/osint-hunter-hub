@@ -99,7 +99,7 @@ async def _run_with_typing(update, context, work):
             await task
         except asyncio.CancelledError:
             pass
-BOT_VERSION = ("v2.24.3 SUPERCHARGED ⚡fasthttp — owner HIMANSHU · @ANONYMOUS_XH · admin ID private Render config")
+BOT_VERSION = ("v2.24.4 SPEED-UP ⚡fasthttp — owner HIMANSHU · @ANONYMOUS_XH · admin ID private Render config")
 # v2.0 SECURITY: token sirf Render env se (pehle public repo me hardcoded tha!)
 BOT_TOKEN = os.getenv('BOT_TOKEN', '').strip()
 PORT = int(os.getenv('PORT','10000'))
@@ -136,7 +136,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
                         f"<p>commit {_c} · uptime {_up} min · ⚡fasthttp engine</p></body></html>"
                         .encode('utf-8', 'ignore'))
                 except Exception:
-                    self.wfile.write(b'LIVE v2.24.2')
+                    self.wfile.write(b'LIVE v2.24.4')
             elif self.path == '/webhook':
                 self.wfile.write(b'Webhook endpoint - POST only')
             else:
@@ -244,7 +244,7 @@ def self_ping_loop():
             print(f"Keepalive fail: {e}")
         try:
             import fasthttp as _rq
-            _rq.get("https://utility-api-v2.onrender.com/health", timeout=10)
+            _rq.get("https://utility-api-we9m.onrender.com/health", timeout=10)
         except Exception:
             pass
         time.sleep(300)  # 5 min (pehle 10 min tha)
@@ -2142,13 +2142,16 @@ async def handle_pdf_renamer(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     try:
                         import fasthttp as requests
                         file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_obj.file_path}"
-                        # Use streaming download with long timeout
-                        with requests.get(file_url, stream=True, timeout=120) as r:
-                            r.raise_for_status()
-                            with open(input_path, 'wb') as f:
-                                for chunk in r.iter_content(chunk_size=8192):
-                                    if chunk:
-                                        f.write(chunk)
+                        # v2.24.4 SPEED: stream-download ab to_thread me (pehle async event-loop
+                        # ko block karta tha — bade PDF par POORA BOT sab users ke liye freeze!)
+                        def _direct_dl():
+                            with requests.get(file_url, stream=True, timeout=120) as r:
+                                r.raise_for_status()
+                                with open(input_path, 'wb') as f:
+                                    for chunk in r.iter_content(chunk_size=8192):
+                                        if chunk:
+                                            f.write(chunk)
+                        await asyncio.to_thread(_direct_dl)
                         if os.path.exists(input_path) and os.path.getsize(input_path) > 0:
                             downloaded = True
                             break
@@ -3149,9 +3152,13 @@ async def main_async():
         import fasthttp as requests
         # Fast stable + payments live notification
         try:
-            requests.post(f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage', 
-                         data={'chat_id': str(config.ADMIN_ID),
-                               'text': f'✅ 10 TOOLS LIVE!\n\n💰 UPI: {UPI_ID}\n🎁 Free: {FREE_CREDITS} credits\n👑 Premium: 30d ₹49 - 365d ₹299\n🛠️ Admin: Full controls\n⚡ Fast: No delay fix\n\nGrid: Number, TG, Family, RC+Challan, V2M, A2M, Business, Result, Web, Help\nPayments: /premium /myplan /buy\nAdmin: /admin'}, timeout=5)
+            # v2.24.4 SPEED: startup-notification bhi to_thread me (event-loop block na ho)
+            await asyncio.to_thread(
+                requests.post,
+                f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage',
+                data={'chat_id': str(config.ADMIN_ID),
+                      'text': f'✅ 10 TOOLS LIVE!\n\n💰 UPI: {UPI_ID}\n🎁 Free: {FREE_CREDITS} credits\n👑 Premium: 30d ₹49 - 365d ₹299\n🛠️ Admin: Full controls\n⚡ Fast: No delay fix\n\nGrid: Number, TG, Family, RC+Challan, V2M, A2M, Business, Result, Web, Help\nPayments: /premium /myplan /buy\nAdmin: /admin'},
+                timeout=5)
         except:
             pass
     except Exception as e:
