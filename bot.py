@@ -3164,14 +3164,12 @@ async def main_async():
     await app.initialize()
     await app.start()
 
-    # v2.26.4c: POLLING-MODE (Render-LB-stale-container-webhook-kha-jaata-tha — polling direct-TG-pull, 100%-delivery)
-    print("Starting POLLING mode (webhook disabled)...")
+    # v2.26.4d: webhook-delete-then-PTB-native-polling (update_processor-purappur-library-managed)
     try:
         await app.bot.delete_webhook(drop_pending_updates=False)
-        print("Webhook deleted — long-polling active")
+        print("Webhook deleted — PTB polling ready", flush=True)
     except Exception as _we:
-        print(f"webhook-delete skip: {_we}")
-    app.create_task(_poll_forever())
+        print(f"webhook-delete skip: {_we}", flush=True)
 
     import fasthttp as requests
     # Fast stable + payments live notification
@@ -3193,7 +3191,14 @@ async def main_async():
         print(f"10 tools + payments alive - Users: {len(all_user_ids())} - Premium: {len(premium_users())} - Pending: {pending_payments_count()}")
 
 def main():
-    asyncio.run(main_async())
+    # v2.26.4d — PTB-NATIVE run_polling (Render-CMD): sab-library-managed, webhook-nahi
+    print("main(): run_polling starting...", flush=True)
+    app.run_polling(
+        drop_pending_updates=False,
+        allowed_updates=["message", "callback_query"],
+        poll_interval=1.0,
+        timeout=30,
+    )
 
 if __name__ == "__main__":
     main()
