@@ -3189,13 +3189,21 @@ async def main_async():
         pass
 
     print("10 TOOLS + PAYMENTS + CREDITS + ADMIN FAST STABLE WEBHOOK READY!")
-    app.create_task(_upqueue_consumer())
-    print("upqueue-consumer ON", flush=True)
+    print("upqueue-INLINE-consumer ON", flush=True)
     while True:
+        # v2.26.4g: consumer-INLINE (koi-alag-task-nahi — GUARANTEED-execution main-loop-me)
+        _n = 0
+        while _UPQ:
+            data = _UPQ.pop(0)
+            _n += 1
+            try:
+                await handle_update(data)
+            except Exception as _he:
+                _UPSTATS["err"] += 1
+                print(f"inline-handle err: {_he}", flush=True)
+        _UPSTATS["q"] = len(_UPQ)
         LOOP_TS = time.time()
-        await asyncio.sleep(60)
-        # (keepalive self_ping_loop me hai — bot khud ko + gateway ko har 5 min ping karta hai)
-        print(f"10 tools + payments alive - Users: {len(all_user_ids())} - Premium: {len(premium_users())} - Pending: {pending_payments_count()}")
+        await asyncio.sleep(0.5)
 
 def main():
     # v2.26.4e — PROVEN-boot (v2.24.9-flow): asyncio.run(main_async()) — app+handlers+webhook yahin banta hai
