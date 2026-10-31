@@ -2184,7 +2184,7 @@ def _lx(tool_path: str, param: str, value: str, timeout: float = 30) -> dict:
 
 NATIVE_HANDLERS = {
     "ip": _native_ip,
-    "gst": _native_gst,
+    "gst": _chain(("native", _native_gst), ("lakshitx", lambda t: _lx("gst", "gst", t))),
     "pantogst": _native_pantogst,
     "ifsc": _native_ifsc,
     "pincode": _native_pincode,
