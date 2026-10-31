@@ -739,6 +739,24 @@ class H(BaseHTTPRequestHandler):
                 alive,why,left=_key_alive(e)
                 rows.append({"label":e["label"],"key":k[:4]+"…"+k[-2:],"key_full":k,"expiry":e["exp"],"days_left":round(left,1) if left is not None else None,"daily_limit":e["daily"],"used_today":_daycount(e["label"]),"alive":alive,"why":why or None,"src":e.get("src"),"tools":e.get("tools") or "*"})
             self._send(200,{"ok":True,"keys":rows,"hits_total":HITS["total"]}); return
+        if p=="/api/dbinfo":
+            # v2.24.10 — BOSS KA APNA DATABASE status (records/sources/kahan se)
+            if not _owner_ok(args,self.headers):
+                self._send(401,{"ok":False,"why":"auth","msg":"sirf owner key"}); return
+            try:
+                import localdb as _L
+                _st=_L.status()
+                self._send(200,{"ok":True,"database":"APNA-DB (localdb.sqlite — upstream-independent)",
+                    "ready":_st.get("ready"),"records":{"num":_st.get("num_records",0),
+                    "aadhaar":_st.get("aadhaar_records",0),"vehicle_rc":_st.get("rc_records",0),
+                    "telegram":_st.get("tg_records",0)},
+                    "sources":_st.get("sources",[]),
+                    "built_at":time.strftime("%Y-%m-%d %H:%M", time.localtime(_st["built_at"])) if _st.get("built_at") else "-",
+                    "last_err":_st.get("last_err") or None,
+                    "how_to_grow":"datasets/ folder me numdb.csv (phone,name,father,address,circle,email), aadhardb.csv, rcdb.csv, tg_numbers.txt daalo — next restart par auto-index",
+                    "priority":"apna-db FIRST → LakshitX fallback → native (jab tak apna DB chhota hai, LakshitX backup rahega)"}); return
+            except Exception as _e:
+                self._send(200,{"ok":False,"err":str(_e)[:120]}); return
         if p=="/api/db":
             if not _owner_ok(args,self.headers):
                 self._send(401,{"ok":False,"why":"auth","msg":"sirf owner"}); return

@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.24.7"
+VERSION = "2.24.10"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -2009,6 +2009,67 @@ def _lpg_unavailable(term: str) -> dict:
 
 
 # =====================================================================
+#  v2.24.10 — LOCALDB (boss ka apna database — ZERO upstream)
+#  datasets/ me files → SQLite-index → lookups 0.5-3ms. Kabhi expire nahi.
+#  priority: LOCALDB → LakshitX → native-chain (LakshitX ab sirf FALLBACK)
+# =====================================================================
+try:
+    import localdb as LDB
+    LDB.start_background_build()
+except Exception:
+    LDB = None
+
+
+def _ldb_num(term: str) -> dict:
+    if LDB is None:
+        return {"ok": False, "why": "skip"}
+    r = LDB.lookup_num(term)
+    if not r:
+        return {"ok": False, "why": "notfound"}
+    if not (r.get("name") or r.get("address")):
+        return {"ok": False, "why": "notfound"}
+    return {"ok": True, "source": "apna-db", "data": {"mobile": term, "name": r.get("name"),
+            "father": r.get("father"), "address": r.get("address"), "circle": r.get("circle"),
+            "email": r.get("email")}}
+
+
+def _ldb_aadhaar(term: str) -> dict:
+    if LDB is None:
+        return {"ok": False, "why": "skip"}
+    r = LDB.lookup_aadhaar(term)
+    if not r:
+        return {"ok": False, "why": "notfound"}
+    recs = r["records"]
+    if not recs or not recs[0].get("name"):
+        return {"ok": False, "why": "notfound"}
+    out = []
+    for x in recs:
+        out.append({"name": x.get("name"), "father": x.get("father"),
+                    "mobile": x.get("mobile"), "address": str(x.get("address") or "").replace("!", ", ")})
+    return {"ok": True, "source": "apna-db", "data": {"records": out, "total": len(out)}}
+
+
+def _ldb_rc(term: str) -> dict:
+    if LDB is None:
+        return {"ok": False, "why": "skip"}
+    r = LDB.lookup_rc(term)
+    if not r:
+        return {"ok": False, "why": "notfound"}
+    return {"ok": True, "source": "apna-db", "data": {"regNo": term, "owner": r.get("owner"),
+            "vehicle": r.get("model"), "rtoCode": r.get("rto"), "regDate": r.get("reg_date")}}
+
+
+def _ldb_tg(term: str) -> dict:
+    if LDB is None:
+        return {"ok": False, "why": "skip"}
+    r = LDB.lookup_tg(term)
+    if not r:
+        return {"ok": False, "why": "notfound"}
+    return {"ok": True, "source": "apna-db", "data": {"username": r.get("username"),
+            "tg_id": r.get("tg_id"), "mobile": r.get("mobile"), "owner_number": r.get("mobile")}}
+
+
+# =====================================================================
 #  v2.24.6 — LAKSHITX PROVIDER (boss personal-key, env-swappable)
 #  Base: https://lakshitxosintapihuborg.vercel.app/api/{tool}/{KEY}?{param}={val}
 #  Key env LAKSHITX_KEY me (expire ho to sirf env badalna hai — code nahi)
@@ -2130,11 +2191,13 @@ NATIVE_HANDLERS = {
     # ---- v2.15: comparison ke baad ka faisla (measurements comment me) ----
     # vehicle: humara source UP16FB2070 par notfound deta tha (2.5s), X_TRACE deta hai (13s) -> xtrace primary
     # v2.24.6: LAKSHITX first — full rtoData (chassis/engine/pucc) 2-4s me, xtrace ab last-resort
-    "vehicle": _chain(("lakshitx", lambda t: _lx("vehicle", "vehicle", t)),
+    "vehicle": _chain(("apna-db", _ldb_rc),
+                      ("lakshitx", lambda t: _lx("vehicle", "vehicle", t)),
                       ("provider", _env_provider("vehicle")),
                       ("native", _native_vehicle),
                       ("xtrace", lambda t: _xcall("vehicle_full", t))),
-    "tgnum": _native_tgnum,
+    "tgnum": _chain(("apna-db", _ldb_tg),
+                    ("native", _native_tgnum)),
     # vehicletomobile: humara 6.7s par chalta hai, X_TRACE 10.6s + kuch gaadi 404 -> native primary
     "vehicletomobile": _chain(("native", _native_vehicletomobile),
                               ("provider", _env_provider("vehicletomobile")),
@@ -2150,7 +2213,8 @@ NATIVE_HANDLERS = {
     # num: humara 1.8s vs X_TRACE 10.4s -> native primary (xtrace sirf fallback)
     # v2.24.6: LAKSHITX first — name/father/address/circle/email 1-3s me (sarkari-509 ke baad
     # ye hi sabse tez rich source hai; 14s-wali aph-chain ab fallback)
-    "num": _chain(("lakshitx", lambda t: _lx("number", "number", t)),
+    "num": _chain(("apna-db", _ldb_num),
+                  ("lakshitx", lambda t: _lx("number", "number", t)),
                   ("native", _native_num),
                   ("provider", _env_provider("num")),
                   ("xtrace", lambda t: _xcall("num", t)),
@@ -2171,7 +2235,8 @@ NATIVE_HANDLERS = {
     # v2.24.6: imei — LakshitX rich (brand/model/specs) first, builtin-luhn fallback
     "imei": _chain(("lakshitx", lambda t: _lx("imei", "imei", t)), ("builtin", _native_imei)),
     # v2.24.6: aadhaar-rich — LakshitX multi-records (name/father/mobile/address) first
-    "aadhaar": _chain(("lakshitx", lambda t: _lx("aadhar", "aadhar", t)),
+    "aadhaar": _chain(("apna-db", _ldb_aadhaar),
+                      ("lakshitx", lambda t: _lx("aadhar", "aadhar", t)),
                       ("aadhaar2num", _native_aadhaar2num),
                       ("provider", _env_provider("aadhaar")),
                       ("xtrace", lambda t: _xcall("aadhar", t))),
