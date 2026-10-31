@@ -134,19 +134,18 @@ class WebhookHandler(BaseHTTPRequestHandler):
                         "<html><body><h1>🚀 OSINT Hunter Hub — LIVE ⚡</h1>"
                         f"<p>{_bv}</p>"
                         f"<p>commit {_c} · uptime {_up} min · ⚡fasthttp engine</p>"
-                        # v2.24.8: vault visibility (in-memory status — koi network nahi)
                         + (lambda _vs: (
-                            "<p>vault: " + ("ON" if _vs.get("token_set") else "OFF")
+                            "<p>vault: " + ("ON" if _vs.get("token_set") else ("OFF" if globals().get("VAULT_OK") is False else "…"))
                             + " | backups: " + str(_vs.get("count", 0))
-                            + " | last ok: " + (_vs.get("age_s") if isinstance(_vs.get("age_s"), int) else "-").__str__()
-                            + "s ago | db_users: " + str(_vs.get("db_users", 0))
-                            + (("| err: " + str(_vs.get("last_err"))[:120]) if _vs.get("last_err") else "")
+                            + " | last-ok: " + str(_vs.get("age_s", "-")) + "s"
+                            + " | db_users: " + str(_vs.get("db_users", 0))
+                            + (("| err: " + str(_vs.get("last_err"))[:140]) if _vs.get("last_err") else "")
                             + "</p>"
-                          ))(globals().get("VAULT_OK") and __import__("modules.vault", fromlist=["vault"]).vault.status() or {})
+                          ))(globals().get("_VAULT_SNAP") or {})
                         + "</body></html>"
                         .encode('utf-8', 'ignore'))
                 except Exception:
-                    self.wfile.write(b'LIVE v2.24.4')
+                    self.wfile.write(b'LIVE v2.24.8')
             elif self.path == '/webhook':
                 self.wfile.write(b'Webhook endpoint - POST only')
             else:
@@ -569,6 +568,8 @@ def health_html() -> str:
         return f"OK - Bot Alive ({e})"
 
 
+_VAULT_SNAP = {}  # v2.24.8: vault-status precomputed (watchdog har 60s update karta hai)
+
 def watchdog_loop():
     """RAM guard + hang guard (utility-duniya-bot jaisa auto-restart)."""
     mem_limit = int(os.getenv("MEM_RESTART_MB", "470") or 470)
@@ -576,6 +577,13 @@ def watchdog_loop():
     while True:
         time.sleep(60)
         try:
+            # v2.24.8: vault-status snapshot (health me zero-hang dikhane ke liye)
+            try:
+                if VAULT_OK:
+                    _VAULT_SNAP.clear()
+                    _VAULT_SNAP.update(vault.status())
+            except Exception:
+                pass
             rss = _ram_mb()
             if mem_limit and rss and rss > mem_limit:
                 print(f"WATCHDOG: RAM {rss}MB > {mem_limit}MB — auto restart")
