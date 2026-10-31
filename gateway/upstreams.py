@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.25.0"
+VERSION = "2.25.1"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -1917,7 +1917,12 @@ def _ldb_tg(term: str) -> dict:
 #  31 Oct live-verified: number/aadhar/vehicle/ifsc/pincode/imei/gst/upi ✓
 # =====================================================================
 LX_BASE = (os.environ.get("LAKSHITX_BASE") or "https://lakshitxosintapihuborg.vercel.app/api").strip().rstrip("/")
-LX_KEY = (os.environ.get("LAKSHITX_KEY") or "").strip()
+LX_KEYS = [k.strip() for k in (
+    (os.environ.get("LAKSHITX_KEY") or ""),
+    (os.environ.get("LAKSHITX_KEY_1D") or ""),
+    (os.environ.get("LAKSHITX_KEY_D3") or ""),
+) if k.strip()] or [""]
+LX_KEY = LX_KEYS[0]  # compat: purana ref
 
 
 # =====================================================================
@@ -1970,20 +1975,32 @@ def _native_insta(term: str) -> dict:
 
 
 def _lx(tool_path: str, param: str, value: str, timeout: float = 30) -> dict:
-    """LakshitX call → normalized {ok,source,data} ya {ok:False,why}. None-return nahi."""
-    if not LX_KEY:
+    """LakshitX call → normalized {ok,source,data} ya {ok:False,why}. None-return nahi.
+    Key-chain: LAKSHITX_KEY → _KEY_1D → _KEY_D3 (sirf invalid-key/expired pe aage badhta hai — value-error pe nahi)."""
+    if not LX_KEYS or LX_KEYS == [""]:
         return {"ok": False, "why": "unconfigured", "msg": "LAKSHITX_KEY env missing"}
-    url = (f"{LX_BASE}/{tool_path}/{urllib.parse.quote(LX_KEY)}"
-           f"?{urllib.parse.quote(param)}={urllib.parse.quote(str(value))}")
-    code, body = http_get(url, timeout=timeout)
-    if code != 200 or not body:
-        return {"ok": False, "why": "upstream", "msg": f"LakshitX HTTP {code}"}
-    try:
-        j = json.loads(body)
-    except Exception:
-        return {"ok": False, "why": "upstream", "msg": "LakshitX bad-json"}
-    if not isinstance(j, dict):
-        return {"ok": False, "why": "upstream", "msg": "LakshitX odd-response"}
+    j = None
+    for ki, LX_KEY in enumerate(LX_KEYS):
+        url = (f"{LX_BASE}/{tool_path}/{urllib.parse.quote(LX_KEY)}"
+               f"?{urllib.parse.quote(param)}={urllib.parse.quote(str(value))}")
+        code, body = http_get(url, timeout=timeout)
+        if code != 200 or not body:
+            # 401/403 = key-mara → agla key try karo (agar bacha hai)
+            if code in (401, 403) and ki + 1 < len(LX_KEYS):
+                continue
+            return {"ok": False, "why": "upstream", "msg": f"LakshitX HTTP {code}"}
+        try:
+            j = json.loads(body)
+        except Exception:
+            return {"ok": False, "why": "upstream", "msg": "LakshitX bad-json"}
+        if not isinstance(j, dict):
+            return {"ok": False, "why": "upstream", "msg": "LakshitX odd-response"}
+        msg_l = str(j.get("message") or "").lower()
+        if "invalid key" in msg_l or "expired" in msg_l or "key blocked" in msg_l:
+            if ki + 1 < len(LX_KEYS):
+                continue
+            return {"ok": False, "why": "key-dead", "msg": "LakshitX: sab keys dead/expired"}
+        break  # valid-key + real response → isko normalize karo
     st, suc = j.get("status"), j.get("success")
     if st == "error":
         return {"ok": False, "why": "validation", "msg": j.get("message") or "LakshitX param issue"}
