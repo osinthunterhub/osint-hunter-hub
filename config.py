@@ -27,9 +27,11 @@ if _admins_raw:
             pass
 
 # Force Join - Provided
-FORCE_CHANNEL = os.getenv("FORCE_CHANNEL", "-1004393596502").strip()
-FORCE_CHANNEL_LINK = os.getenv("FORCE_CHANNEL_LINK", "https://t.me/osint_xpert").strip()
-FORCE_CHANNEL_USERNAME = os.getenv("FORCE_CHANNEL_USERNAME", "osint_xpert").strip()
+FORCE_CHANNEL = os.getenv("FORCE_CHANNEL", "").strip()  # v2.24.8: force-join DEFAULT OFF (boss order)
+if FORCE_CHANNEL.lower() in ("0", "off", "false", "none", "no"):
+    FORCE_CHANNEL = ""
+FORCE_CHANNEL_LINK = os.getenv("FORCE_CHANNEL_LINK", "").strip()
+FORCE_CHANNEL_USERNAME = os.getenv("FORCE_CHANNEL_USERNAME", "").strip()
 
 OWNER_USERNAME = os.getenv("OWNER_USERNAME", "@ANONYMOUS_XH").strip()   # v2.6: naya admin
 BRAND_TAG = os.getenv("BRAND_TAG", "@ANONYMOUS_XH").strip()

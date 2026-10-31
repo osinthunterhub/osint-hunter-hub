@@ -3,7 +3,7 @@
 10 PRO TOOLS — sab apne OWN utility-api gateway se (never-expire, env-swappable)
 
 Owner: private admin account
-Force Channel: -1004393596502 @osint_xpert
+Force Channel: -1004393596502 @ANONYMOUS_XH
 Repo: savecontentrestricted-pixel/osint
 
 Tools (menu = har row 2 buttons, DARK math-bold labels):
@@ -99,7 +99,7 @@ async def _run_with_typing(update, context, work):
             await task
         except asyncio.CancelledError:
             pass
-BOT_VERSION = ("v2.24.5 AUDIT ⚡fasthttp — owner HIMANSHU · @ANONYMOUS_XH · admin ID private Render config")
+BOT_VERSION = ("v2.24.8 STABLE ⚡fasthttp — owner HIMANSHU · @ANONYMOUS_XH · admin ID private Render config")
 # v2.0 SECURITY: token sirf Render env se (pehle public repo me hardcoded tha!)
 BOT_TOKEN = os.getenv('BOT_TOKEN', '').strip()
 PORT = int(os.getenv('PORT','10000'))
@@ -133,7 +133,17 @@ class WebhookHandler(BaseHTTPRequestHandler):
                     self.wfile.write(
                         "<html><body><h1>🚀 OSINT Hunter Hub — LIVE ⚡</h1>"
                         f"<p>{_bv}</p>"
-                        f"<p>commit {_c} · uptime {_up} min · ⚡fasthttp engine</p></body></html>"
+                        f"<p>commit {_c} · uptime {_up} min · ⚡fasthttp engine</p>"
+                        # v2.24.8: vault visibility (in-memory status — koi network nahi)
+                        + (lambda _vs: (
+                            "<p>vault: " + ("ON" if _vs.get("token_set") else "OFF")
+                            + " | backups: " + str(_vs.get("count", 0))
+                            + " | last ok: " + (_vs.get("age_s") if isinstance(_vs.get("age_s"), int) else "-").__str__()
+                            + "s ago | db_users: " + str(_vs.get("db_users", 0))
+                            + (("| err: " + str(_vs.get("last_err"))[:120]) if _vs.get("last_err") else "")
+                            + "</p>"
+                          ))(globals().get("VAULT_OK") and __import__("modules.vault", fromlist=["vault"]).vault.status() or {})
+                        + "</body></html>"
                         .encode('utf-8', 'ignore'))
                 except Exception:
                     self.wfile.write(b'LIVE v2.24.4')
@@ -776,7 +786,7 @@ async def send_force_join_ui(update: Update, context: ContextTypes.DEFAULT_TYPE,
     user = update.effective_user
     
     kb = [
-        [InlineKeyboardButton("📢 Join Channel @osint_xpert", url=config.FORCE_CHANNEL_LINK)],
+        [InlineKeyboardButton("📢 Join Channel @ANONYMOUS_XH", url=config.FORCE_CHANNEL_LINK)],
         [InlineKeyboardButton("✅ Verify Now", callback_data="check_joined")]
     ]
     
@@ -856,7 +866,7 @@ async def check_joined_callback(update: Update, context: ContextTypes.DEFAULT_TY
             # Not joined - show retry with channel above Verify Now
             await query.answer("❌ You haven't joined our channel yet. Join the channel first, then tap Verify Now.", show_alert=True)
             kb = [
-                [InlineKeyboardButton("📢 Join Channel @osint_xpert", url=config.FORCE_CHANNEL_LINK)],
+                [InlineKeyboardButton("📢 Join Channel @ANONYMOUS_XH", url=config.FORCE_CHANNEL_LINK)],
                 [InlineKeyboardButton("✅ Verify Now", callback_data="check_joined")]
             ]
             try:
@@ -883,7 +893,7 @@ async def check_joined_callback(update: Update, context: ContextTypes.DEFAULT_TY
         logger.warning(f"check_joined_callback error: {e}")
         await query.answer(f"❌ Verification failed, retry!", show_alert=True)
         kb = [
-            [InlineKeyboardButton("📢 Join Channel @osint_xpert", url=config.FORCE_CHANNEL_LINK)],
+            [InlineKeyboardButton("📢 Join Channel @ANONYMOUS_XH", url=config.FORCE_CHANNEL_LINK)],
             [InlineKeyboardButton("✅ Verify Now", callback_data="check_joined")]
         ]
         try:
@@ -934,7 +944,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ✅ <b>Verified: Channel Joined!</b>
 💡 Neeche menu se tool chuno, ya /help bhejo.
 
-📢 Update ke liye: @osint_xpert
+📢 Update ke liye: @ANONYMOUS_XH
 👑 Owner: @ANONYMOUS_XH
 """
 
@@ -990,7 +1000,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"/ip 8.8.8.8\n"
                 f"/domain google.com\n\n"
                 f"Grid menu loading... /help for all commands\n\n"
-                f"👑 @ANONYMOUS_XH | 📢 @osint_xpert",
+                f"👑 @ANONYMOUS_XH | 📢 @ANONYMOUS_XH",
                 parse_mode=ParseMode.HTML
             )
         except Exception as e2:
@@ -1272,7 +1282,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     txt += "📋 <b>RESULT CHECK</b> — <code>/result</code> (BSEB)\n\n"
     txt += "🌐 <b>WEBSITE EXTRACTOR</b> — <code>/wextract https://example.com</code>\n\n"
     txt += sep()
-    txt += "<b>🛡️ Safety:</b>\n• Force join: @osint_xpert\n• Owner: @ANONYMOUS_XH\n\n"
+    txt += "<b>🛡️ Safety:</b>\n• Force join: @ANONYMOUS_XH\n• Owner: @ANONYMOUS_XH\n\n"
     txt += "/start se grid menu kholo."
     await update.message.reply_text(txt, parse_mode=ParseMode.HTML)
 
@@ -2399,7 +2409,7 @@ async def pay_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔢 UTR: <code>{utr}</code>\n\n"
         f"📸 Ab payment ka <b>screenshot bhejo</b> (photo ke roop me)\n\n"
         f"⏳ Owner 5-10 min me verify karega\n"
-        f"📢 Channel: @osint_xpert",
+        f"📢 Channel: @ANONYMOUS_XH",
         parse_mode=ParseMode.HTML
     )
     # Notify admin
@@ -2470,7 +2480,7 @@ async def handle_payment_screenshot(update: Update, context: ContextTypes.DEFAUL
             f"⏳ Owner verification me 5-10 min lagega\n"
             f"✅ Approve hote hi premium chalu ho jayega\n\n"
             f"📊 /myplan se status check karo\n"
-            f"📢 @osint_xpert",
+            f"📢 @ANONYMOUS_XH",
             parse_mode=ParseMode.HTML
         )
         
@@ -2596,7 +2606,7 @@ async def approve_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"✅ Payment {pid} approved!\n\nUser: <code>{uid}</code>\nPlan: {pay['plan_name']}\nPremium until: {new_until}\nDays: {days}", parse_mode=ParseMode.HTML)
         # Notify user
         try:
-            await context.bot.send_message(chat_id=uid, text=f"✅ <b>Payment Approved!</b>\n\n📦 Plan: {pay['plan_name']}\n⏰ Premium until: {new_until}\n\n🚀 Ab unlimited use karo!\n\n/myplan se dekho\n📢 @osint_xpert", parse_mode=ParseMode.HTML)
+            await context.bot.send_message(chat_id=uid, text=f"✅ <b>Payment Approved!</b>\n\n📦 Plan: {pay['plan_name']}\n⏰ Premium until: {new_until}\n\n🚀 Ab unlimited use karo!\n\n/myplan se dekho\n📢 @ANONYMOUS_XH", parse_mode=ParseMode.HTML)
         except:
             pass
     elif credits > 0:
@@ -2802,7 +2812,7 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sent = 0
     for uid in uids:
         try:
-            await context.bot.send_message(chat_id=uid, text=f"📢 <b>Announcement</b>\n\n{msg}\n\n📢 @osint_xpert", parse_mode=ParseMode.HTML)
+            await context.bot.send_message(chat_id=uid, text=f"📢 <b>Announcement</b>\n\n{msg}\n\n📢 @ANONYMOUS_XH", parse_mode=ParseMode.HTML)
             sent += 1
         except:
             pass
