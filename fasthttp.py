@@ -32,6 +32,7 @@ class FastSession(requests.Session):
 
 
 S = FastSession()
+request = S.request   # v2.24.9 CRITICAL: vault.py requests.request(...) use karta tha — expose nahi tha = SAARE vault-backups day-1 se fail!
 get = S.get
 post = S.post
 put = S.put
