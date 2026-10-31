@@ -875,7 +875,10 @@ class H(BaseHTTPRequestHandler):
                         fin({"ok":False,"why":"validation","msg":"Format: DLNUMBER DD-MM-YYYY (e.g. UP25 20210027727 01-01-2001)"}); return
                     _dl=re.sub(r"\s+"," ",_m.group(1).strip().upper()); _dob=_m.group(2)
                     _c,_b=U.http_get("https://driving-licence-info-api-abhigyan.vercel.app/dlinfoapi?dl="+urllib.parse.quote(_dl)+"&dob="+urllib.parse.quote(_dob),30)
-                    _j=json.loads(_b) if (_c==200 and _b) else None
+                    # v2.24.5 HONESTY: provider paused/down ho to 'notfound' jhooth mat bolo — upstream batao
+                    if _c!=200:
+                        fin({"ok":False,"why":"upstream","msg":"DL provider abhi paused/down hai — owner naya provider laga dega, thodi der baad try karo."}); return
+                    _j=json.loads(_b) if _b else None
                     if not isinstance(_j,dict) or not _j.get("ok"):
                         fin({"ok":False,"why":"notfound","msg":"DL not found for this number + DOB."}); return
                     _j.pop("captcha_attempts",None)

@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.24.4"
+VERSION = "2.24.5"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -1330,7 +1330,7 @@ def _native_phonebiz(term: str) -> dict:
     Input: landline (011-29523401 / 911129523401) ya mobile (9876543210)."""
     if not _biz_ensure():
         return {"ok": False, "why": "building",
-                "msg": f"Business index build ho raha hai ({_BIZ_ERR or '30s baad retry karo'})"}
+                "msg": f"Business dataset is instance par deployed NAHI hai ({_BIZ_ERR or 'bizpart files chahiye'}) — owner ko datasets/bizpart_* files lagani hongi. Baaki sab tools live hain."}
     d = re.sub(r"\D", "", str(term or ""))
     if not (8 <= len(d) <= 15):
         return {"ok": False, "why": "validation", "msg": "8-15 digit phone number bhejo"}
