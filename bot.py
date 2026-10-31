@@ -3164,12 +3164,14 @@ async def main_async():
     await app.initialize()
     await app.start()
 
-    # v2.26.4d: webhook-delete-then-PTB-native-polling (update_processor-purappur-library-managed)
+    # v2.26.4e: WEBHOOK-mode RESTORED (v2.24.9-proven) — loop global-2996-par-declared
+    loop = asyncio.get_running_loop()
     try:
-        await app.bot.delete_webhook(drop_pending_updates=False)
-        print("Webhook deleted — PTB polling ready", flush=True)
+        await app.bot.set_webhook(url=WEBHOOK_URL, allowed_updates=["message","callback_query","my_chat_member"],
+                                   secret_token=(WEBHOOK_SECRET or None))
+        print(f"Webhook set to {WEBHOOK_URL}", flush=True)
     except Exception as _we:
-        print(f"webhook-delete skip: {_we}", flush=True)
+        print(f"Webhook set error: {_we}", flush=True)
 
     import fasthttp as requests
     # Fast stable + payments live notification
@@ -3178,12 +3180,12 @@ async def main_async():
             requests.post,
             f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage',
             data={'chat_id': str(config.ADMIN_ID),
-                  'text': f'✅ 10 TOOLS LIVE (POLLING)!\n\n💰 UPI: {UPI_ID}\n🎁 Free: {FREE_CREDITS} credits\n👑 Premium: 30d ₹49 - 365d ₹299\n🛠️ Admin: Full controls\n⚡ Fast: No delay fix\n\nGrid: Number, TG, Family, RC+Challan, V2M, A2M, Business, Result, Web, Help\nPayments: /premium /myplan /buy\nAdmin: /admin'},
+                  'text': f'✅ 10 TOOLS LIVE!\n\n💰 UPI: {UPI_ID}\n🎁 Free: {FREE_CREDITS} credits\n👑 Premium: 30d ₹49 - 365d ₹299\n🛠️ Admin: Full controls\n⚡ Fast: No delay fix\n\nGrid: Number, TG, Family, RC+Challan, V2M, A2M, Business, Result, Web, Help\nPayments: /premium /myplan /buy\nAdmin: /admin'},
             timeout=5)
     except Exception:
         pass
 
-    print("10 TOOLS + PAYMENTS + CREDITS + ADMIN — POLLING READY!")
+    print("10 TOOLS + PAYMENTS + CREDITS + ADMIN FAST STABLE WEBHOOK READY!")
     while True:
         LOOP_TS = time.time()
         await asyncio.sleep(60)
@@ -3191,14 +3193,8 @@ async def main_async():
         print(f"10 tools + payments alive - Users: {len(all_user_ids())} - Premium: {len(premium_users())} - Pending: {pending_payments_count()}")
 
 def main():
-    # v2.26.4d — PTB-NATIVE run_polling (Render-CMD): sab-library-managed, webhook-nahi
-    print("main(): run_polling starting...", flush=True)
-    app.run_polling(
-        drop_pending_updates=False,
-        allowed_updates=["message", "callback_query"],
-        poll_interval=1.0,
-        timeout=30,
-    )
+    # v2.26.4e — PROVEN-boot (v2.24.9-flow): asyncio.run(main_async()) — app+handlers+webhook yahin banta hai
+    asyncio.run(main_async())
 
 if __name__ == "__main__":
     main()
