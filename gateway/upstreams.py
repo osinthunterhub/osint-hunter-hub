@@ -1944,9 +1944,11 @@ def _native_dl(term: str) -> dict:
     url = (DL_API_BASE + "/dlinfoapi?dl="
            + urllib.parse.quote(dl) + "&dob=" + urllib.parse.quote(dob))
     j = None
+    _last_code = 0
     for attempt in (1, 2):   # v2.21.3: transient fail par 1 auto-retry
         try:
             code, body = http_get(url, timeout=12)   # v2.21.6: 30s hang-risk -> 12s
+            _last_code = code
             j = json.loads(body) if (code == 200 and body) else None
         except Exception:
             j = None
@@ -1955,6 +1957,10 @@ def _native_dl(term: str) -> dict:
         if attempt == 1:
             time.sleep(1)
     if not isinstance(j, dict) or not j.get("ok"):
+        # v2.24.5 HONESTY: provider paused/down (non-200) ho to fake 'notfound' nahi — saaf batao
+        if _last_code != 200:
+            return {"ok": False, "why": "upstream",
+                    "msg": "DL provider abhi paused/down hai — owner naya provider laga dega, thodi der baad try karo."}
         return {"ok": False, "why": "notfound", "msg": "DL not found for this number + DOB."}
     j.pop("captcha_attempts", None)
     return {"ok": True, "source": "sarathi-portal", "data": j}
