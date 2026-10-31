@@ -661,6 +661,7 @@ class H(BaseHTTPRequestHandler):
             "/dl_info": "dl", "/fastag_info": "fastag", "/imei_info": "imei",
             "/challan_info": "challan", "/ip_info": "ip", "/web_extract": "webextract",
             "/phonebiz_info": "phonebiz", "/lpg_info": "lpg",
+            "/upi_info": "upi",  # v2.24.6 — LakshitX upi-verify
         }
         if p in _ALIASES:
             args.setdefault("term", args.get("query") or args.get("q") or args.get("number") or "")

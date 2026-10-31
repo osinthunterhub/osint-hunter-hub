@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.24.5"
+VERSION = "2.24.6"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -139,6 +139,7 @@ TOOLS = {
     # v2.12 — OWNER KE APNE TOOLS: kisi paid/demo API par depend nahi
     "plate":           "v2.12 NATIVE OFFLINE: RC plate decode — state/RTO/city (0ms, never expire)",
     "aadhaarcheck":    "v2.12 NATIVE OFFLINE: Aadhaar Verhoeff checksum (0ms, koi personal data nahi)",
+    "upi":             "UPI ID se payer/bank info (v2.24.6 LakshitX provider)",
     "gstcheck":        "v2.12 NATIVE OFFLINE: GSTIN checksum validate (0ms)",
     "webextract":      "v2.12 NATIVE SELF-HOSTED: URL -> title/desc/emails/phones/links (koi third party nahi)",
     "aadhaar2pan":     "Aadhaar se PAN (masked) — sarkariallupdates aadhaar2pan (v2.23 NEW, Ronak source)",
@@ -228,6 +229,7 @@ _RE = {
     # v2.12 — offline tools (validation khud handler me bhi hai)
     "plate":           re.compile(r"^[A-Za-z0-9 \-]{4,16}$"),
     "aadhaarcheck":    re.compile(r"^[0-9 \-]{12,16}$"),
+    "upi":             re.compile(r"^[A-Za-z0-9._-]{2,}@[A-Za-z]{2,}$"),
     "gstcheck":        re.compile(r"^[A-Za-z0-9]{15}$"),
     "webextract":      re.compile(r"^(https?://)?[A-Za-z0-9.\-]+\.[A-Za-z]{2,}.*$"),
     "tc":              re.compile(r"^[6-9][0-9]{9}$"),
@@ -2004,6 +2006,70 @@ def _lpg_unavailable(term: str) -> dict:
             "msg": "LPG source abhi band hai — naya source judte hi ye tool khud live ho jayega"}
 
 
+# =====================================================================
+#  v2.24.6 — LAKSHITX PROVIDER (boss personal-key, env-swappable)
+#  Base: https://lakshitxosintapihuborg.vercel.app/api/{tool}/{KEY}?{param}={val}
+#  Key env LAKSHITX_KEY me (expire ho to sirf env badalna hai — code nahi)
+#  31 Oct live-verified: number/aadhar/vehicle/ifsc/pincode/imei/gst/upi ✓
+# =====================================================================
+LX_BASE = (os.environ.get("LAKSHITX_BASE") or "https://lakshitxosintapihuborg.vercel.app/api").strip().rstrip("/")
+LX_KEY = (os.environ.get("LAKSHITX_KEY") or "").strip()
+
+
+def _lx(tool_path: str, param: str, value: str, timeout: float = 30) -> dict:
+    """LakshitX call → normalized {ok,source,data} ya {ok:False,why}. None-return nahi."""
+    if not LX_KEY:
+        return {"ok": False, "why": "unconfigured", "msg": "LAKSHITX_KEY env missing"}
+    url = (f"{LX_BASE}/{tool_path}/{urllib.parse.quote(LX_KEY)}"
+           f"?{urllib.parse.quote(param)}={urllib.parse.quote(str(value))}")
+    code, body = http_get(url, timeout=timeout)
+    if code != 200 or not body:
+        return {"ok": False, "why": "upstream", "msg": f"LakshitX HTTP {code}"}
+    try:
+        j = json.loads(body)
+    except Exception:
+        return {"ok": False, "why": "upstream", "msg": "LakshitX bad-json"}
+    if not isinstance(j, dict):
+        return {"ok": False, "why": "upstream", "msg": "LakshitX odd-response"}
+    st, suc = j.get("status"), j.get("success")
+    if st == "error":
+        return {"ok": False, "why": "validation", "msg": j.get("message") or "LakshitX param issue"}
+    if st == "failed" or suc is False or st is False:
+        return {"ok": False, "why": "notfound", "msg": j.get("message") or "LakshitX: data nahi mila"}
+    # ---- per-tool normalize (unke shapes tool-wise alag hain) ----
+    if tool_path == "number" and isinstance(j.get("data"), dict):
+        d = dict(j["data"]); d.pop("_id", None)
+        return {"ok": True, "source": "lakshitx", "data": {
+            "mobile": d.get("mobile"), "name": d.get("name"), "father": d.get("fname"),
+            "address": str(d.get("address") or "").replace("!", ", "),
+            "circle": d.get("circle"), "email": d.get("email")}}
+    if tool_path == "aadhar" and isinstance(j.get("result"), list):
+        recs = [{"name": r.get("NAME"), "father": r.get("fname"), "mobile": r.get("num"),
+                 "alt": r.get("alt"), "circle": r.get("circle"), "email": r.get("email"),
+                 "address": str(r.get("ADDRESS") or "").replace("!", ", ")}
+                for r in j["result"][:10] if isinstance(r, dict)]
+        return {"ok": True, "source": "lakshitx", "data": {"records": recs, "total": len(j["result"])}}
+    if tool_path == "vehicle" and isinstance(j.get("response"), dict):
+        d = dict(j["response"]); d["regNo"] = j.get("regNo")
+        return {"ok": True, "source": "lakshitx", "data": d}
+    if tool_path == "ifsc" and isinstance(j.get("data"), dict):
+        return {"ok": True, "source": "lakshitx", "data": j["data"]}
+    if tool_path == "pincode" and j.get("status") == "success":
+        return {"ok": True, "source": "lakshitx",
+                "data": {"pincode": j.get("pincode"), "total": j.get("total_records_found"),
+                         "records": (j.get("records") or [])[:15]}}
+    if tool_path == "imei" and isinstance(j.get("result"), dict):
+        return {"ok": True, "source": "lakshitx", "data": j["result"]}
+    if tool_path == "gst":
+        return {"ok": True, "source": "lakshitx", "data": j.get("data") if j.get("data") else j}
+    if tool_path == "upi":
+        if suc is True or st is True:
+            clean = {k: v for k, v in j.items() if k not in ("developer", "join_channel", "buy_apis")}
+            return {"ok": True, "source": "lakshitx", "data": clean.get("data") or clean}
+        return {"ok": False, "why": "notfound", "msg": j.get("message") or "UPI record nahi mila"}
+    return {"ok": True, "source": "lakshitx", "data": j}
+
+
 NATIVE_HANDLERS = {
     "ip": _native_ip,
     "gst": _native_gst,
@@ -2012,7 +2078,9 @@ NATIVE_HANDLERS = {
     "pincode": _native_pincode,
     # ---- v2.15: comparison ke baad ka faisla (measurements comment me) ----
     # vehicle: humara source UP16FB2070 par notfound deta tha (2.5s), X_TRACE deta hai (13s) -> xtrace primary
-    "vehicle": _chain(("provider", _env_provider("vehicle")),
+    # v2.24.6: LAKSHITX first — full rtoData (chassis/engine/pucc) 2-4s me, xtrace ab last-resort
+    "vehicle": _chain(("lakshitx", lambda t: _lx("vehicle", "vehicle", t)),
+                      ("provider", _env_provider("vehicle")),
                       ("native", _native_vehicle),
                       ("xtrace", lambda t: _xcall("vehicle_full", t))),
     "tgnum": _native_tgnum,
@@ -2029,7 +2097,10 @@ NATIVE_HANDLERS = {
                           ("provider", _env_provider("aadhaar2num")),
                           ("shuruu", _shuruu_aadhaar2num)),
     # num: humara 1.8s vs X_TRACE 10.4s -> native primary (xtrace sirf fallback)
-    "num": _chain(("native", _native_num),
+    # v2.24.6: LAKSHITX first — name/father/address/circle/email 1-3s me (sarkari-509 ke baad
+    # ye hi sabse tez rich source hai; 14s-wali aph-chain ab fallback)
+    "num": _chain(("lakshitx", lambda t: _lx("number", "number", t)),
+                  ("native", _native_num),
                   ("provider", _env_provider("num")),
                   ("xtrace", lambda t: _xcall("num", t)),
                   ("shuruu", _shuruu_num)),
@@ -2046,7 +2117,18 @@ NATIVE_HANDLERS = {
     # v2.12 — owner ke apne free-forever tools
     "lpg": _lpg_unavailable,
     "dl": _native_dl,
-    "imei": _native_imei,
+    # v2.24.6: imei — LakshitX rich (brand/model/specs) first, builtin-luhn fallback
+    "imei": _chain(("lakshitx", lambda t: _lx("imei", "imei", t)), ("builtin", _native_imei)),
+    # v2.24.6: aadhaar-rich — LakshitX multi-records (name/father/mobile/address) first
+    "aadhaar": _chain(("lakshitx", lambda t: _lx("aadhar", "aadhar", t)),
+                      ("aadhaar2num", _native_aadhaar2num),
+                      ("provider", _env_provider("aadhaar")),
+                      ("xtrace", lambda t: _xcall("aadhar", t))),
+    # v2.24.6: ifsc/pincode — native instant primary, LakshitX rich-fallback
+    "ifsc": _chain(("native", _native_ifsc), ("lakshitx", lambda t: _lx("ifsc", "ifsc", t))),
+    "pincode": _chain(("native", _native_pincode), ("lakshitx", lambda t: _lx("pincode", "pincode", t))),
+    # v2.24.6: upi — NAYA TOOL (LakshitX upi-verify)
+    "upi": _chain(("lakshitx", lambda t: _lx("upi", "upi", t))),
     "aadhaar2pan": _native_aadhaar2pan,
     "fastag": _native_fastag,
     "plate": _nf_plate,
@@ -2057,10 +2139,7 @@ NATIVE_HANDLERS = {
     # v2.15.1 — har xtrace-only tool ke peeche ENV PROVIDER slot
     # (kal X_TRACE expire ho -> TC_API_URL env daalo, code nahi chhuna)
     "tc": _chain(("provider", _env_provider("tc")), ("xtrace", lambda t: _xcall("tc", t))),
-    # aadhaar: xtrace rich -> env provider -> native aadhaar2num (kam data, par zinda)
-    "aadhaar": _chain(("aadhaar2num", _native_aadhaar2num),
-                      ("provider", _env_provider("aadhaar")),
-                      ("xtrace", lambda t: _xcall("aadhar", t))),
+    # aadhaar: v2.24.6 — LakshitX-chain upar shift (yahan duplicate hata)
 }
 
 # =====================================================================
