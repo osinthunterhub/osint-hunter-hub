@@ -662,6 +662,7 @@ class H(BaseHTTPRequestHandler):
             "/challan_info": "challan", "/ip_info": "ip", "/web_extract": "webextract",
             "/phonebiz_info": "phonebiz", "/lpg_info": "lpg",
             "/upi_info": "upi",  # v2.24.6 — LakshitX upi-verify
+            "/insta_info": "insta", "/instagram_info": "insta",  # v2.24.7 — native
         }
         if p in _ALIASES:
             args.setdefault("term", args.get("query") or args.get("q") or args.get("number") or "")

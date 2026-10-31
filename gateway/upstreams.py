@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import zlib
 
-VERSION = "2.24.6"
+VERSION = "2.24.7"
 
 VEHICLE_API_BASE = os.environ.get(
     "VEHICLE_API_URL",
@@ -140,6 +140,7 @@ TOOLS = {
     "plate":           "v2.12 NATIVE OFFLINE: RC plate decode — state/RTO/city (0ms, never expire)",
     "aadhaarcheck":    "v2.12 NATIVE OFFLINE: Aadhaar Verhoeff checksum (0ms, koi personal data nahi)",
     "upi":             "UPI ID se payer/bank info (v2.24.6 LakshitX provider)",
+    "insta":           "Instagram profile info — followers/bio/pic/verified (v2.24.7 NATIVE)",
     "gstcheck":        "v2.12 NATIVE OFFLINE: GSTIN checksum validate (0ms)",
     "webextract":      "v2.12 NATIVE SELF-HOSTED: URL -> title/desc/emails/phones/links (koi third party nahi)",
     "aadhaar2pan":     "Aadhaar se PAN (masked) — sarkariallupdates aadhaar2pan (v2.23 NEW, Ronak source)",
@@ -230,6 +231,7 @@ _RE = {
     "plate":           re.compile(r"^[A-Za-z0-9 \-]{4,16}$"),
     "aadhaarcheck":    re.compile(r"^[0-9 \-]{12,16}$"),
     "upi":             re.compile(r"^[A-Za-z0-9._-]{2,}@[A-Za-z]{2,}$"),
+    "insta":           re.compile(r"^@?[A-Za-z0-9._]{1,30}$"),
     "gstcheck":        re.compile(r"^[A-Za-z0-9]{15}$"),
     "webextract":      re.compile(r"^(https?://)?[A-Za-z0-9.\-]+\.[A-Za-z]{2,}.*$"),
     "tc":              re.compile(r"^[6-9][0-9]{9}$"),
@@ -2016,6 +2018,55 @@ LX_BASE = (os.environ.get("LAKSHITX_BASE") or "https://lakshitxosintapihuborg.ve
 LX_KEY = (os.environ.get("LAKSHITX_KEY") or "").strip()
 
 
+# =====================================================================
+#  v2.24.7 — INSTAGRAM PROFILE INFO (NATIVE — koi middleman nahi)
+#  Source: storyviewer GCF (public endpoint, storyviewer-7a64d.cloudfunctions.net)
+#  (ye wahi src hai jo 'leaked zip' me FroxtDevil ne becha tha — hum direct maarenge)
+# =====================================================================
+_INSTA_GCF = (os.environ.get("INSTA_GCF_URL")
+              or "https://europe-west3-storyviewer-7a64d.cloudfunctions.net/getInstagramData").strip()
+
+
+def _native_insta(term: str) -> dict:
+    """v2.24.7 — Instagram profile info: username/ID se full profile (followers, bio, pic...)."""
+    u = str(term or "").strip().lstrip("@")
+    if not re.match(r"^[A-Za-z0-9._]{1,30}$", u):
+        return {"ok": False, "why": "validation", "msg": "Instagram username bhejo (e.g. therock)"}
+    payload = json.dumps({"data": {"endpoint": "/v1/info",
+                                   "params": {"include_about": True,
+                                              "username_or_id_or_url": u}}}).encode()
+    req = urllib.request.Request(_INSTA_GCF, data=payload, method="POST",
+                                 headers={"User-Agent": "okhttp/4.10.0",
+                                          "Content-Type": "application/json; charset=utf-8"})
+    try:
+        with urllib.request.urlopen(req, timeout=18) as r:
+            data = json.loads(r.read().decode("utf-8", "replace"))
+    except Exception as e:
+        return {"ok": False, "why": "upstream", "msg": f"Insta-source busy/down ({str(e)[:40]})"}
+    d = ((data.get("result") or {}).get("data") or {}) if isinstance(data, dict) else {}
+    if not d:
+        return {"ok": False, "why": "notfound", "msg": "Account private/deleted ya data nahi mila"}
+    about = d.get("about") or {}
+    merged = {**about, **{k: v for k, v in d.items() if k != "about"}}
+    username = merged.get("username") or u
+    pic = merged.get("profile_pic_url") or merged.get("hd_profile_pic_url") or ""
+    return {"ok": True, "source": "insta-native", "data": {
+        "username": username,
+        "full_name": merged.get("full_name") or "",
+        "bio": merged.get("biography") or "",
+        "category": merged.get("category_name") or merged.get("account_category") or "",
+        "country": about.get("country") or "",
+        "joined": about.get("date_joined") or "",
+        "followers": merged.get("follower_count") or 0,
+        "following": merged.get("following_count") or 0,
+        "posts": merged.get("media_count") or 0,
+        "private": bool(merged.get("is_private")),
+        "verified": bool(merged.get("is_verified")),
+        "business": bool(merged.get("is_business")),
+        "profile_pic": pic,
+        "external_url": merged.get("external_url") or ""}}
+
+
 def _lx(tool_path: str, param: str, value: str, timeout: float = 30) -> dict:
     """LakshitX call → normalized {ok,source,data} ya {ok:False,why}. None-return nahi."""
     if not LX_KEY:
@@ -2129,6 +2180,8 @@ NATIVE_HANDLERS = {
     "pincode": _chain(("native", _native_pincode), ("lakshitx", lambda t: _lx("pincode", "pincode", t))),
     # v2.24.6: upi — NAYA TOOL (LakshitX upi-verify)
     "upi": _chain(("lakshitx", lambda t: _lx("upi", "upi", t))),
+    # v2.24.7: insta — NAYA TOOL (native GCF, koi middleman nahi)
+    "insta": _native_insta,
     "aadhaar2pan": _native_aadhaar2pan,
     "fastag": _native_fastag,
     "plate": _nf_plate,
