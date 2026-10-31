@@ -2987,8 +2987,8 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def main_async():
     global app, loop
-    loop = asyncio.get_running_loop()
     global LOOP_TS
+    loop = asyncio.get_running_loop()
     LOOP_TS = time.time()
     print("Building 8 TOOLS FAST STABLE app...")
     # v2.5.5 (bot-1 jaisa): Render env FREE_CREDITS/TG_CREDITS badle -> sab reset
@@ -3142,7 +3142,6 @@ async def main_async():
         traceback.print_exc()
 
     print("10 TOOLS + PAYMENTS + CREDITS + ADMIN FAST STABLE WEBHOOK READY!")
-    global LOOP_TS
     while True:
         LOOP_TS = time.time()
         await asyncio.sleep(60)
